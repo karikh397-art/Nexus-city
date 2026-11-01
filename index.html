@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>NEXUS CITY — Shape the Future</title>
+<title>Ma Ville 3D — Gestion urbaine</title>
 <style>
 :root{--bg:#101a2b;--panel:#142238ee;--panel2:#1d3049;--line:#ffffff20;--gold:#ffd166;--green:#75df9b;--red:#ff7777;--muted:#a9bdd0}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#9bd7f5;color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}button{font:inherit;color:inherit;cursor:pointer}#game{position:fixed;inset:0}canvas{display:block}
@@ -13,45 +13,8 @@
 #toast{position:fixed;top:75px;left:50%;transform:translateX(-50%);background:#101a2bf2;border:1px solid var(--line);padding:9px 14px;border-radius:12px;font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:5}#toast.show{opacity:1}
 #modal{display:none;position:fixed;inset:0;background:#07101dcc;z-index:4;align-items:center;justify-content:center;padding:16px}#modal.open{display:flex}#dialog{width:min(560px,100%);max-height:82vh;overflow:auto;background:#142238;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 20px 70px #0008}#dialog h2{font-size:18px;margin:0 0 10px}#dialog p,#dialog li{font-size:12px;line-height:1.5;color:#d5e2ef}#dialog .close{float:right}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.info{background:#1d3049;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:12px}.info b{color:var(--gold)}.row{display:flex;justify-content:space-between;gap:8px;margin:5px 0;font-size:12px}
 @media(max-width:650px){#side{top:103px;left:7px;width:165px;bottom:125px}#side .panel{padding:8px}#side .panel h3{font-size:12px}#tools{max-height:35vh}.metric{min-width:65px;padding:6px 8px}.metric b{font-size:13px}#hint{bottom:116px;font-size:10px}.action{padding:8px;font-size:10px}#bottom{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap}#bottom .action{flex:0 0 auto}.cards{grid-template-columns:1fr 1fr}}
-
-#titleScreen{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(ellipse at 50% 75%,#245a78 0%,#10243b 43%,#070d1b 100%);transition:opacity .7s,visibility .7s}
-#titleScreen.hidden{opacity:0;visibility:hidden;pointer-events:none}
-#titleScreen:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,#050a16 100%);z-index:1}
-.title-glow{position:absolute;width:65vw;height:65vw;max-width:650px;max-height:650px;border-radius:50%;background:#27c4ff18;filter:blur(50px);top:12%;left:50%;transform:translateX(-50%)}
-.skyline{position:absolute;bottom:0;left:0;right:0;height:48%;display:flex;align-items:flex-end;justify-content:center;gap:7px;opacity:.72}
-.skyline span{display:block;width:5.5%;min-width:20px;background:linear-gradient(180deg,#1b4263,#091526);border:1px solid #6edbff20;box-shadow:inset 0 0 18px #4bc5ff15}
-.skyline span:nth-child(1){height:26%}.skyline span:nth-child(2){height:42%}.skyline span:nth-child(3){height:34%}.skyline span:nth-child(4){height:65%}.skyline span:nth-child(5){height:47%}.skyline span:nth-child(6){height:84%;width:8%}.skyline span:nth-child(7){height:58%}.skyline span:nth-child(8){height:38%}.skyline span:nth-child(9){height:70%}.skyline span:nth-child(10){height:45%}.skyline span:nth-child(11){height:30%}
-.skyline span:after{content:"";display:block;width:100%;height:100%;background:repeating-linear-gradient(90deg,transparent 0 8px,#8ee8ff18 9px 11px),repeating-linear-gradient(0deg,transparent 0 13px,#8ee8ff20 14px 16px)}
-.title-content{position:relative;z-index:2;text-align:center;padding:24px;width:min(720px,94vw);margin-top:-4vh}
-.title-kicker{font-size:11px;letter-spacing:.48em;color:#7fe3ff;text-transform:uppercase;font-weight:800}
-.title-logo{font-size:clamp(42px,10vw,88px);line-height:.9;letter-spacing:-.065em;font-weight:1000;margin:16px 0 12px;color:#f5fbff;text-shadow:0 5px 0 #163b58,0 12px 35px #25bfff66}
-.title-logo em{font-style:normal;color:#67dcff}
-.title-sub{font-size:12px;letter-spacing:.25em;color:#b5d8e9;text-transform:uppercase;margin:0 0 30px}
-.title-line{height:2px;width:90px;background:linear-gradient(90deg,transparent,#65dcff,transparent);margin:0 auto 24px}
-.title-buttons{display:flex;flex-direction:column;align-items:center;gap:10px}.title-btn.settings{background:#10243dcc;border-color:#6edbff55;color:#bdefff}.settings-overlay{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:16px;background:#030916e8;backdrop-filter:blur(12px)}.settings-overlay.open{display:flex}.settings-card{width:min(520px,100%);max-height:88vh;overflow:auto;background:linear-gradient(145deg,#142b45,#091728);border:1px solid #68dfff55;border-radius:20px;padding:18px;box-shadow:0 20px 80px #0009}.settings-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.settings-head h2{margin:0;font-size:20px;letter-spacing:.08em}.setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 4px;border-bottom:1px solid #ffffff16;font-size:13px}.setting-row small{display:block;color:#8eabc2;font-size:10px;margin-top:3px}.setting-row input[type=checkbox]{width:22px;height:22px;accent-color:#42c9f5}.setting-row input[type=range]{width:125px;accent-color:#42c9f5}.setting-row select{background:#10243b;color:#eaf8ff;border:1px solid #5e9fbd88;border-radius:8px;padding:8px}.settings-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}.settings-actions button{background:#173d5a;border:1px solid #66cbed66;border-radius:9px;padding:9px 13px}.settings-actions .primary{background:#137da8}
-.title-btn{width:min(270px,80vw);padding:14px 20px;border-radius:12px;border:1px solid #8beaff66;background:linear-gradient(100deg,#1377a8,#25b7dc);color:white;font-weight:900;letter-spacing:.16em;font-size:13px;box-shadow:0 8px 30px #00b9ff35}
-.title-btn.secondary{background:#0c1a2dcc;border-color:#a4d7e833;color:#d5efff}
-.title-foot{font-size:10px;color:#789bb0;letter-spacing:.16em;margin-top:24px}
-@media(max-height:650px){.title-content{margin-top:0}.title-logo{font-size:48px}.title-sub{margin-bottom:14px}.title-line{margin-bottom:12px}.title-btn{padding:10px}}
 </style></head>
 <body><div id="game"></div>
-<div id="titleScreen">
- <div class="title-glow"></div>
- <div class="skyline"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
- <div class="title-content">
-  <div class="title-kicker">Build • Manage • Dominate</div>
-  <div class="title-logo">NEXUS <em>CITY</em></div>
-  <div class="title-sub">Shape the future</div>
-  <div class="title-line"></div>
-  <div class="title-buttons">
-   <button class="title-btn" id="playGame">▶ &nbsp; PLAY GAME</button>
-   <button class="title-btn secondary" id="continueGame">↗ &nbsp; ENTER CITY</button>
-   <button class="title-btn settings" id="openSettings">⚙ &nbsp; SETTINGS</button>
-  </div>
-  <div class="title-foot">A NEXT-GENERATION CITY SIMULATION</div>
- </div>
-</div>
-
 <div id="hud">
  <div class="metric">💰 Trésorerie<b id="money">35 000 €</b><small id="balance">+0 €/mois</small></div>
  <div class="metric">👥 Population<b id="people">0</b><small id="homes">0 logements</small></div>
@@ -68,38 +31,16 @@
  <section class="panel"><h3>🏗️ Construire <small class="muted">— sélectionne puis touche le terrain</small></h3><div id="tools"></div></section>
 </aside>
 <div id="bottom">
- <button class="action" id="roads">🛣️ Voir routes</button><button class="action" id="economy">💶 Budget</button><button class="action" id="taxes">⚖️ Taxes</button><button class="action" id="services">🚑 Services</button><button class="action" id="rotate">⟳ Recentrer</button><button class="action" id="save">💾 Sauvegarder</button><button class="action" id="speed">⏩ Vitesse ×1</button><button class="action" id="pause">⏸ Pause</button><button class="action" id="gameSettings">⚙ Réglages</button>
+ <button class="action" id="roads">🛣️ Voir routes</button><button class="action" id="economy">💶 Budget</button><button class="action" id="taxes">⚖️ Taxes</button><button class="action" id="services">🚑 Services</button><button class="action" id="rotate">⟳ Recentrer</button><button class="action" id="save">💾 Sauvegarder</button><button class="action" id="speed">⏩ Vitesse ×1</button><button class="action" id="pause">⏸ Pause</button>
 </div><div id="hint">Choisis une construction puis touche une case libre • Fais glisser pour tourner • Pince pour zoomer</div><div id="toast"></div>
 <div id="modal"><div id="dialog"><button class="action close" id="close">Fermer ✕</button><div id="dialogContent"></div></div></div>
-<div class="settings-overlay" id="settingsOverlay"><div class="settings-card"><div class="settings-head"><h2>⚙ GAME SETTINGS</h2><button class="action" id="closeSettings">✕</button></div><p class="muted">Personnalise ton expérience dans NEXUS CITY. Tes choix sont conservés sur cet appareil.</p>
- <div class="setting-row"><div><b>🎵 Musique d’ambiance</b><small>Active ou coupe la musique du jeu</small></div><input type="checkbox" id="musicSetting" checked></div>
- <div class="setting-row"><div><b>🔊 Effets sonores</b><small>Sons des constructions et actions</small></div><input type="checkbox" id="soundSetting" checked></div>
- <div class="setting-row"><div><b>✨ Qualité graphique</b><small>Influence les détails et la fluidité</small></div><select id="graphicsSetting"><option value="low">Économie</option><option value="normal" selected>Équilibrée</option><option value="high">Élevée</option></select></div>
- <div class="setting-row"><div><b>🎥 Sensibilité caméra</b><small>Vitesse de rotation et de zoom</small></div><input type="range" id="cameraSetting" min="5" max="20" value="10"></div>
- <div class="setting-row"><div><b>💾 Sauvegarde automatique</b><small>Sauvegarde à chaque fin de mois</small></div><input type="checkbox" id="autoSaveSetting" checked></div>
- <div class="setting-row"><div><b>💡 Astuces à l’écran</b><small>Afficher les conseils de construction</small></div><input type="checkbox" id="hintsSetting" checked></div>
- <div class="settings-actions"><button id="resetSettings">Réinitialiser</button><button class="primary" id="applySettings">APPLIQUER</button></div>
- </div></div>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
-const settingsDefaults={music:true,sound:true,graphics:'normal',camera:10,autoSave:true,hints:true};
-let gameSettings={...settingsDefaults};try{gameSettings={...settingsDefaults,...JSON.parse(localStorage.getItem('nexus-city-settings')||'{}')}}catch(e){}
-let audioContext=null,musicNodes=[],musicTimer=null;
-function audioReady(){if(!audioContext){const AC=window.AudioContext||window.webkitAudioContext;if(AC)audioContext=new AC()}if(audioContext?.state==='suspended')audioContext.resume();return audioContext}
-function stopMusic(){if(musicTimer){clearInterval(musicTimer);musicTimer=null}musicNodes.forEach(n=>{try{n.stop()}catch(e){}});musicNodes=[]}
-function startMusic(){if(!gameSettings.music)return;const ctx=audioReady();if(!ctx||musicNodes.length)return;const master=ctx.createGain();master.gain.value=.025;master.connect(ctx.destination);const notes=[110,164.81,220];musicNodes=notes.map((f,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=i===1?'triangle':'sine';o.frequency.value=f;g.gain.value=i===0?.5:.22;o.connect(g);g.connect(master);o.start();return o});let step=0;const chords=[[110,164.81,220],[98,146.83,196],[130.81,196,261.63],[87.31,130.81,174.61]];musicTimer=setInterval(()=>{if(!gameSettings.music||!audioContext)return;const c=chords[(++step)%chords.length];musicNodes.forEach((o,i)=>o.frequency.setTargetAtTime(c[i],audioContext.currentTime,1.2))},4200)}
-function playSfx(kind='tap'){if(!gameSettings.sound)return;const ctx=audioReady();if(!ctx)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=kind==='build'?620:kind==='success'?780:360;g.gain.setValueAtTime(.055,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.13);o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.14)}
-function saveSettings(){localStorage.setItem('nexus-city-settings',JSON.stringify(gameSettings))}
-function showSettings(){const o=document.querySelector('#settingsOverlay');o.classList.add('open');document.querySelector('#musicSetting').checked=gameSettings.music;document.querySelector('#soundSetting').checked=gameSettings.sound;document.querySelector('#graphicsSetting').value=gameSettings.graphics;document.querySelector('#cameraSetting').value=gameSettings.camera;document.querySelector('#autoSaveSetting').checked=gameSettings.autoSave;document.querySelector('#hintsSetting').checked=gameSettings.hints}
-function applySettings(){gameSettings={music:document.querySelector('#musicSetting').checked,sound:document.querySelector('#soundSetting').checked,graphics:document.querySelector('#graphicsSetting').value,camera:Number(document.querySelector('#cameraSetting').value),autoSave:document.querySelector('#autoSaveSetting').checked,hints:document.querySelector('#hintsSetting').checked};saveSettings();if(gameSettings.music)startMusic();else stopMusic();if(typeof renderer!=='undefined'){const ratios={low:1,normal:Math.min(devicePixelRatio,1.5),high:Math.min(devicePixelRatio,2)};renderer.setPixelRatio(ratios[gameSettings.graphics]);renderer.shadowMap.enabled=gameSettings.graphics!=='low';controls.rotateSpeed=gameSettings.camera/10;controls.zoomSpeed=gameSettings.camera/10}document.querySelector('#hint').style.display=gameSettings.hints?'block':'none';document.querySelector('#settingsOverlay').classList.remove('open');toast('Réglages appliqués !');playSfx('success')}
-document.querySelector('#playGame').onclick=()=>{document.querySelector('#titleScreen').classList.add('hidden');if(gameSettings.music)startMusic();playSfx('success')};
-document.querySelector('#continueGame').onclick=()=>{document.querySelector('#titleScreen').classList.add('hidden');if(gameSettings.music)startMusic();playSfx('success')};
-document.querySelector('#openSettings').onclick=showSettings;document.querySelector('#gameSettings').onclick=showSettings;document.querySelector('#closeSettings').onclick=()=>document.querySelector('#settingsOverlay').classList.remove('open');document.querySelector('#applySettings').onclick=applySettings;document.querySelector('#resetSettings').onclick=()=>{gameSettings={...settingsDefaults};showSettings()};
 const root=document.querySelector('#game'), scene=new THREE.Scene();scene.background=new THREE.Color(0x9bd7f5);scene.fog=new THREE.Fog(0x9bd7f5,48,105);
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,200);camera.position.set(24,29,31);
-const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(gameSettings.graphics==='low'?1:gameSettings.graphics==='high'?Math.min(devicePixelRatio,2):Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=gameSettings.graphics!=='low';renderer.shadowMap.type=THREE.PCFSoftShadowMap;root.appendChild(renderer.domElement);
-const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,0,0);controls.enableDamping=true;controls.rotateSpeed=gameSettings.camera/10;controls.zoomSpeed=gameSettings.camera/10;controls.maxPolarAngle=Math.PI/2.08;controls.minDistance=12;controls.maxDistance=62;
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;root.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,0,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI/2.08;controls.minDistance=12;controls.maxDistance=62;
 scene.add(new THREE.HemisphereLight(0xffffff,0x607b60,2));const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-18,36,20);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-35;sun.shadow.camera.right=35;sun.shadow.camera.top=35;sun.shadow.camera.bottom=-35;scene.add(sun);
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshStandardMaterial({color:0x72b66b,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.08;ground.receiveShadow=true;scene.add(ground);const grid=new THREE.GridHelper(24,24,0x426b46,0x8ac17b);grid.position.y=.015;scene.add(grid);
 const ray=new THREE.Raycaster(),pointer=new THREE.Vector2(),tiles=new Map(),vehicles=[],walkers=[];let selected='house',money=35000,pop=0,month=1,paused=false,speed=1,monthClock=0,monthIncome=0,monthExpense=0,happiness=65,showRoads=false;
@@ -189,7 +130,6 @@ function monthEnd(){
  else if(departures>0){citizenMessage=`${departures} habitants quittent la ville. Ils se plaignent de ${s.happiness<45?'la qualité de vie':utilityFactor<.95?'manques d’eau ou d’électricité':taxAvg>13?'taxes trop élevées':'manque d’emplois'}.`}
  else if(pop>=capacity){citizenMessage='Les habitants demandent de nouveaux logements : la capacité est presque atteinte.'}
  else {citizenMessage=residentWish(s,capacity,accessibleCapacity,jobFactor,utilityFactor,taxAvg)}
- if(gameSettings.autoSave)save();
  if(money<0)toast('Attention : la ville est endettée ! Réduis les dépenses.');
  else toast(`Mois ${month-1} terminé : ${arrivals} arrivées, ${departures} départs, ${balance>=0?'+':''}${balance.toLocaleString('fr-FR')} €`);
  updateUI();if(month%3===0)showNotice();
@@ -207,7 +147,7 @@ function residentWish(s,capacity,accessibleCapacity,jobFactor,utilityFactor,taxA
 }
 function showNotice(){let s=calcStats(),txt=s.demand>55?'Les habitants réclament davantage de logements.':s.pRatio<1?'La ville manque d’électricité.':s.wRatio<1?'La ville manque d’eau.':s.jobRatio<.65?'Il manque des emplois.':'La ville se développe correctement.';document.querySelector('#status').textContent=txt;document.querySelector('#citizenVoice').textContent=citizenMessage}
 function updateUI(){let s=calcStats();document.querySelector('#money').textContent=money.toLocaleString('fr-FR')+' €';document.querySelector('#people').textContent=pop.toLocaleString('fr-FR');document.querySelector('#homes').textContent=s.t.housing.toLocaleString('fr-FR')+' places';document.querySelector('#date').textContent='Mois '+month;document.querySelector('#balance').textContent=(monthIncome-monthExpense>=0?'+':'')+(monthIncome-monthExpense).toLocaleString('fr-FR')+' €/mois';document.querySelector('#power').textContent=`${s.u.power} / ${s.u.pneed}`;document.querySelector('#water').textContent=`💧 ${s.u.water} / ${s.u.wneed} eau`;document.querySelector('#happiness').textContent=s.happiness+'%';document.querySelector('#happybar').style.width=s.happiness+'%';document.querySelector('#demand').textContent=s.demand>60?'Très élevée':s.demand>30?'Moyenne':'Faible';document.querySelector('#demandbar').style.width=s.demand+'%';document.querySelector('#jobs').textContent=`${s.t.jobs} / ${Math.ceil(pop*.45)}`;document.querySelector('#tools').innerHTML=Object.entries(defs).map(([k,d])=>`<button class="tool ${selected===k?'active':''}" data-type="${k}"><span class="ico">${d.icon}</span><span>${d.name}<small>${d.cost.toLocaleString('fr-FR')} € • entretien ${d.upkeep} €/mois</small></span></button>`).join('');document.querySelectorAll('.tool').forEach(b=>b.onclick=()=>{selected=b.dataset.type;updateUI()})}
-renderer.domElement.addEventListener('pointerdown',e=>{if(e.target!==renderer.domElement)return;pointer.x=e.clientX/innerWidth*2-1;pointer.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(pointer,camera);let hit=ray.intersectObject(ground)[0];if(!hit)return;let x=Math.round(hit.point.x),z=Math.round(hit.point.z);if(Math.abs(x)>11||Math.abs(z)>11)return;if(selected==='demolish')removeAt(x,z);else if(add(selected,x,z)){toast(defs[selected].name+' construit !');playSfx('build')}});
+renderer.domElement.addEventListener('pointerdown',e=>{if(e.target!==renderer.domElement)return;pointer.x=e.clientX/innerWidth*2-1;pointer.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(pointer,camera);let hit=ray.intersectObject(ground)[0];if(!hit)return;let x=Math.round(hit.point.x),z=Math.round(hit.point.z);if(Math.abs(x)>11||Math.abs(z)>11)return;if(selected==='demolish')removeAt(x,z);else if(add(selected,x,z)){toast(defs[selected].name+' construit !')}});
 function openModal(title,body){document.querySelector('#dialogContent').innerHTML=`<h2>${title}</h2>${body}`;document.querySelector('#modal').classList.add('open')}
 document.querySelector('#close').onclick=()=>document.querySelector('#modal').classList.remove('open');
 document.querySelector('#economy').onclick=()=>{let s=calcStats(),res=[...tiles.values()].filter(v=>defs[v.type].kind==='res'),r=0;res.forEach(v=>{let d=defs[v.type];r+=d.capacity*d.rent});openModal('💶 Budget mensuel',`<div class="cards"><div class="info">Loyers théoriques<br><b>${Math.round(r).toLocaleString('fr-FR')} €</b></div><div class="info">Taxes habitants<br><b>${(pop*18).toLocaleString('fr-FR')} €</b></div><div class="info">Entretien bâtiments<br><b>${s.t.upkeep.toLocaleString('fr-FR')} €</b></div><div class="info">Eau + électricité<br><b>${Math.round(s.u.pneed*1.8+s.u.wneed*1.2).toLocaleString('fr-FR')} €</b></div></div><p>Les loyers réellement encaissés dépendent du nombre de logements occupés. Les revenus et dépenses sont calculés à chaque fin de mois de jeu.</p><p>Dernier bilan : <b>${monthIncome.toLocaleString('fr-FR')} €</b> de recettes et <b>${monthExpense.toLocaleString('fr-FR')} €</b> de dépenses.</p>`)}
@@ -233,5 +173,5 @@ function spawnCars(){for(let i=0;i<6;i++){let v=vehicle();v.position.set(-11+i*4
 spawnCars();
 function pedestrians(){for(let i=0;i<10;i++){let g=new THREE.Group();let torso=new THREE.Mesh(new THREE.CapsuleGeometry(.07,.22,3,6),mat([0x315f9b,0xc45d43,0x6d8c55,0x785a9e][i%4]));torso.position.y=.25;g.add(torso);scene.add(g);walkers.push({obj:g,t:i/10})}}pedestrians();
 let last=performance.now();function animate(now){requestAnimationFrame(animate);let dt=Math.min(.05,(now-last)/1000);last=now;controls.update();if(!paused){monthClock+=dt*speed;if(monthClock>=24){monthClock=0;monthEnd()}vehicles.forEach((v,i)=>{v.t=(v.t+dt*.035)%1;let x=-11+v.t*22;v.obj.position.set(x,.02,(i%2)*2-1);v.obj.rotation.y=0});walkers.forEach((w,i)=>{w.t=(w.t+dt*.018)%1;let a=w.t*Math.PI*2;w.obj.position.set(Math.cos(a)*(4+i%3),0,Math.sin(a)*(4+i%3));w.obj.rotation.y=-a})}renderer.render(scene,camera)}
-requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});updateUI();document.querySelector('#hint').style.display=gameSettings.hints?'block':'none';
+requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});updateUI();
 </script></body></html>
