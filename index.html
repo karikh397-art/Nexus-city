@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>NEXUS CITY — Shape the Future</title>
+<style>
+:root{--bg:#101a2b;--panel:#142238ee;--panel2:#1d3049;--line:#ffffff20;--gold:#ffd166;--green:#75df9b;--red:#ff7777;--muted:#a9bdd0}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#9bd7f5;color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}button{font:inherit;color:inherit;cursor:pointer}#game{position:fixed;inset:0}canvas{display:block}
+#hud{position:fixed;top:env(safe-area-inset-top,8px);left:8px;right:8px;display:flex;gap:6px;align-items:stretch;pointer-events:none;flex-wrap:wrap}.metric{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:7px 10px;min-width:80px;box-shadow:0 5px 18px #18324b30;font-size:11px}.metric b{display:block;font-size:15px;color:var(--gold);white-space:nowrap}.metric small{color:var(--muted)}
+#side{position:fixed;top:100px;left:9px;bottom:110px;width:205px;display:flex;flex-direction:column;gap:7px;pointer-events:none}.panel{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 8px 25px #0b142744;backdrop-filter:blur(8px)}.panel h3{margin:0 0 7px;font-size:13px}.muted{color:var(--muted);font-size:11px;line-height:1.35}.bar{height:7px;background:#ffffff20;border-radius:8px;overflow:hidden;margin:4px 0 7px}.bar i{display:block;height:100%;background:var(--green);width:50%}.bar.warn i{background:var(--gold)}.bar.bad i{background:var(--red)}
+#tools{display:flex;flex-direction:column;gap:5px;overflow:auto;max-height:45vh}.tool{display:flex;align-items:center;gap:8px;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px;font-size:11px}.tool .ico{font-size:20px;width:26px;text-align:center}.tool small{display:block;color:var(--muted)}.tool.active{border:2px solid var(--gold);background:#354965}
+#bottom{position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap}.action{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:9px 11px;font-size:11px}.action.active{border-color:var(--gold);color:var(--gold)}#hint{position:fixed;left:50%;transform:translateX(-50%);bottom:75px;background:#101a2be8;border:1px solid var(--line);padding:7px 12px;border-radius:20px;font-size:11px;white-space:nowrap;pointer-events:none}
+#toast{position:fixed;top:75px;left:50%;transform:translateX(-50%);background:#101a2bf2;border:1px solid var(--line);padding:9px 14px;border-radius:12px;font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:5}#toast.show{opacity:1}
+#modal{display:none;position:fixed;inset:0;background:#07101dcc;z-index:4;align-items:center;justify-content:center;padding:16px}#modal.open{display:flex}#dialog{width:min(560px,100%);max-height:82vh;overflow:auto;background:#142238;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 20px 70px #0008}#dialog h2{font-size:18px;margin:0 0 10px}#dialog p,#dialog li{font-size:12px;line-height:1.5;color:#d5e2ef}#dialog .close{float:right}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.info{background:#1d3049;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:12px}.info b{color:var(--gold)}.row{display:flex;justify-content:space-between;gap:8px;margin:5px 0;font-size:12px}
+@media(max-width:650px){#side{top:103px;left:7px;width:165px;bottom:125px}#side .panel{padding:8px}#side .panel h3{font-size:12px}#tools{max-height:35vh}.metric{min-width:65px;padding:6px 8px}.metric b{font-size:13px}#hint{bottom:116px;font-size:10px}.action{padding:8px;font-size:10px}#bottom{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap}#bottom .action{flex:0 0 auto}.cards{grid-template-columns:1fr 1fr}}
+
+#titleScreen{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(ellipse at 50% 75%,#245a78 0%,#10243b 43%,#070d1b 100%);transition:opacity .7s,visibility .7s}
+#titleScreen.hidden{opacity:0;visibility:hidden;pointer-events:none}
+#titleScreen:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,#050a16 100%);z-index:1}
+.title-glow{position:absolute;width:65vw;height:65vw;max-width:650px;max-height:650px;border-radius:50%;background:#27c4ff18;filter:blur(50px);top:12%;left:50%;transform:translateX(-50%)}
+.skyline{position:absolute;bottom:0;left:0;right:0;height:48%;display:flex;align-items:flex-end;justify-content:center;gap:7px;opacity:.72}
+.skyline span{display:block;width:5.5%;min-width:20px;background:linear-gradient(180deg,#1b4263,#091526);border:1px solid #6edbff20;box-shadow:inset 0 0 18px #4bc5ff15}
+.skyline span:nth-child(1){height:26%}.skyline span:nth-child(2){height:42%}.skyline span:nth-child(3){height:34%}.skyline span:nth-child(4){height:65%}.skyline span:nth-child(5){height:47%}.skyline span:nth-child(6){height:84%;width:8%}.skyline span:nth-child(7){height:58%}.skyline span:nth-child(8){height:38%}.skyline span:nth-child(9){height:70%}.skyline span:nth-child(10){height:45%}.skyline span:nth-child(11){height:30%}
+.skyline span:after{content:"";display:block;width:100%;height:100%;background:repeating-linear-gradient(90deg,transparent 0 8px,#8ee8ff18 9px 11px),repeating-linear-gradient(0deg,transparent 0 13px,#8ee8ff20 14px 16px)}
+.title-content{position:relative;z-index:2;text-align:center;padding:24px;width:min(720px,94vw);margin-top:-4vh}
+.title-kicker{font-size:11px;letter-spacing:.48em;color:#7fe3ff;text-transform:uppercase;font-weight:800}
+.title-logo{font-size:clamp(42px,10vw,88px);line-height:.9;letter-spacing:-.065em;font-weight:1000;margin:16px 0 12px;color:#f5fbff;text-shadow:0 5px 0 #163b58,0 12px 35px #25bfff66}
+.title-logo em{font-style:normal;color:#67dcff}
+.title-sub{font-size:12px;letter-spacing:.25em;color:#b5d8e9;text-transform:uppercase;margin:0 0 30px}
+.title-line{height:2px;width:90px;background:linear-gradient(90deg,transparent,#65dcff,transparent);margin:0 auto 24px}
+.title-buttons{display:flex;flex-direction:column;align-items:center;gap:10px}.title-btn.settings{background:#10243dcc;border-color:#6edbff55;color:#bdefff}.settings-overlay{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:16px;background:#030916e8;backdrop-filter:blur(12px)}.settings-overlay.open{display:flex}.settings-card{width:min(520px,100%);max-height:88vh;overflow:auto;background:linear-gradient(145deg,#142b45,#091728);border:1px solid #68dfff55;border-radius:20px;padding:18px;box-shadow:0 20px 80px #0009}.settings-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.settings-head h2{margin:0;font-size:20px;letter-spacing:.08em}.setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 4px;border-bottom:1px solid #ffffff16;font-size:13px}.setting-row small{display:block;color:#8eabc2;font-size:10px;margin-top:3px}.setting-row input[type=checkbox]{width:22px;height:22px;accent-color:#42c9f5}.setting-row input[type=range]{width:125px;accent-color:#42c9f5}.setting-row select{background:#10243b;color:#eaf8ff;border:1px solid #5e9fbd88;border-radius:8px;padding:8px}.settings-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}.settings-actions button{background:#173d5a;border:1px solid #66cbed66;border-radius:9px;padding:9px 13px}.settings-actions .primary{background:#137da8}
+.title-btn{width:min(270px,80vw);padding:14px 20px;border-radius:12px;border:1px solid #8beaff66;background:linear-gradient(100deg,#1377a8,#25b7dc);color:white;font-weight:900;letter-spacing:.16em;font-size:13px;box-shadow:0 8px 30px #00b9ff35}
+.title-btn.secondary{background:#0c1a2dcc;border-color:#a4d7e833;color:#d5efff}
+.title-foot{font-size:10px;color:#789bb0;letter-spacing:.16em;margin-top:24px}
+@media(max-height:650px){.title-content{margin-top:0}.title-logo{font-size:48px}.title-sub{margin-bottom:14px}.title-line{margin-bottom:12px}.title-btn{padding:10px}}
+</style></head>
+<body><div id="game"></div>
+<div id="titleScreen">
+ <div class="title-glow"></div>
+ <div class="skyline"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+ <div class="title-content">
+  <div class="title-kicker">Build • Manage • Dominate</div>
+  <div class="title-logo">NEXUS <em>CITY</em></div>
+  <div class="title-sub">Shape the future</div>
+  <div class="title-line"></div>
+  <div class="title-buttons">
+   <button class="title-btn" id="playGame">▶ &nbsp; PLAY GAME</button>
+   <button class="title-btn secondary" id="continueGame">↗ &nbsp; ENTER CITY</button>
+   <button class="title-btn settings" id="openSettings">⚙ &nbsp; SETTINGS</button>
+  </div>
+  <div class="title-foot">A NEXT-GENERATION CITY SIMULATION</div>
+ </div>
+</div>
+
+<div id="hud">
+ <div class="metric">💰 Trésorerie<b id="money">35 000 €</b><small id="balance">+0 €/mois</small></div>
+ <div class="metric">👥 Population<b id="people">0</b><small id="homes">0 logements</small></div>
+ <div class="metric">📅 Date<b id="date">Mois 1</b><small id="time">Vitesse ×1</small></div>
+ <div class="metric">⚡ Électricité<b id="power">0 / 0</b><small id="water">💧 0 / 0 eau</small></div>
+</div>
+<aside id="side">
+ <section class="panel"><h3>📊 État de la ville</h3>
+  <div class="row"><span>Bonheur</span><b id="happiness">50%</b></div><div class="bar"><i id="happybar"></i></div>
+  <div class="row"><span>Demande logement</span><b id="demand">Élevée</b></div><div class="bar"><i id="demandbar"></i></div>
+  <div class="row"><span>Emplois</span><b id="jobs">0 / 0</b></div>
+  <div class="muted" id="status">Construis des logements, puis assure les services essentiels.</div><div style="height:1px;background:#ffffff20;margin:7px 0"></div><h3>💬 Voix des habitants</h3><div class="muted" id="citizenVoice">Les premiers habitants attendent de découvrir votre ville.</div>
+ </section>
+ <section class="panel"><h3>🏗️ Construire <small class="muted">— sélectionne puis touche le terrain</small></h3><div id="tools"></div></section>
+</aside>
+<div id="bottom">
+ <button class="action" id="roads">🛣️ Voir routes</button><button class="action" id="economy">💶 Budget</button><button class="action" id="taxes">⚖️ Taxes</button><button class="action" id="services">🚑 Services</button><button class="action" id="rotate">⟳ Recentrer</button><button class="action" id="save">💾 Sauvegarder</button><button class="action" id="speed">⏩ Vitesse ×1</button><button class="action" id="pause">⏸ Pause</button><button class="action" id="gameSettings">⚙ Réglages</button>
+</div><div id="hint">Choisis une construction puis touche une case libre • Fais glisser pour tourner • Pince pour zoomer</div><div id="toast"></div>
+<div id="modal"><div id="dialog"><button class="action close" id="close">Fermer ✕</button><div id="dialogContent"></div></div></div>
+<div class="settings-overlay" id="settingsOverlay"><div class="settings-card"><div class="settings-head"><h2>⚙ GAME SETTINGS</h2><button class="action" id="closeSettings">✕</button></div><p class="muted">Personnalise ton expérience dans NEXUS CITY. Tes choix sont conservés sur cet appareil.</p>
+ <div class="setting-row"><div><b>🎵 Musique d’ambiance</b><small>Active ou coupe la musique du jeu</small></div><input type="checkbox" id="musicSetting" checked></div>
+ <div class="setting-row"><div><b>🔊 Effets sonores</b><small>Sons des constructions et actions</small></div><input type="checkbox" id="soundSetting" checked></div>
+ <div class="setting-row"><div><b>✨ Qualité graphique</b><small>Influence les détails et la fluidité</small></div><select id="graphicsSetting"><option value="low">Économie</option><option value="normal" selected>Équilibrée</option><option value="high">Élevée</option></select></div>
+ <div class="setting-row"><div><b>🎥 Sensibilité caméra</b><small>Vitesse de rotation et de zoom</small></div><input type="range" id="cameraSetting" min="5" max="20" value="10"></div>
+ <div class="setting-row"><div><b>💾 Sauvegarde automatique</b><small>Sauvegarde à chaque fin de mois</small></div><input type="checkbox" id="autoSaveSetting" checked></div>
+ <div class="setting-row"><div><b>💡 Astuces à l’écran</b><small>Afficher les conseils de construction</small></div><input type="checkbox" id="hintsSetting" checked></div>
+ <div class="settings-actions"><button id="resetSettings">Réinitialiser</button><button class="primary" id="applySettings">APPLIQUER</button></div>
+ </div></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+const settingsDefaults={music:true,sound:true,graphics:'normal',camera:10,autoSave:true,hints:true};
+let gameSettings={...settingsDefaults};try{gameSettings={...settingsDefaults,...JSON.parse(localStorage.getItem('nexus-city-settings')||'{}')}}catch(e){}
+let audioContext=null,musicNodes=[],musicTimer=null;
+function audioReady(){if(!audioContext){const AC=window.AudioContext||window.webkitAudioContext;if(AC)audioContext=new AC()}if(audioContext?.state==='suspended')audioContext.resume();return audioContext}
+function stopMusic(){if(musicTimer){clearInterval(musicTimer);musicTimer=null}musicNodes.forEach(n=>{try{n.stop()}catch(e){}});musicNodes=[]}
+function startMusic(){if(!gameSettings.music)return;const ctx=audioReady();if(!ctx||musicNodes.length)return;const master=ctx.createGain();master.gain.value=.025;master.connect(ctx.destination);const notes=[110,164.81,220];musicNodes=notes.map((f,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=i===1?'triangle':'sine';o.frequency.value=f;g.gain.value=i===0?.5:.22;o.connect(g);g.connect(master);o.start();return o});let step=0;const chords=[[110,164.81,220],[98,146.83,196],[130.81,196,261.63],[87.31,130.81,174.61]];musicTimer=setInterval(()=>{if(!gameSettings.music||!audioContext)return;const c=chords[(++step)%chords.length];musicNodes.forEach((o,i)=>o.frequency.setTargetAtTime(c[i],audioContext.currentTime,1.2))},4200)}
+function playSfx(kind='tap'){if(!gameSettings.sound)return;const ctx=audioReady();if(!ctx)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=kind==='build'?620:kind==='success'?780:360;g.gain.setValueAtTime(.055,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.13);o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.14)}
+function saveSettings(){localStorage.setItem('nexus-city-settings',JSON.stringify(gameSettings))}
+function showSettings(){const o=document.querySelector('#settingsOverlay');o.classList.add('open');document.querySelector('#musicSetting').checked=gameSettings.music;document.querySelector('#soundSetting').checked=gameSettings.sound;document.querySelector('#graphicsSetting').value=gameSettings.graphics;document.querySelector('#cameraSetting').value=gameSettings.camera;document.querySelector('#autoSaveSetting').checked=gameSettings.autoSave;document.querySelector('#hintsSetting').checked=gameSettings.hints}
+function applySettings(){gameSettings={music:document.querySelector('#musicSetting').checked,sound:document.querySelector('#soundSetting').checked,graphics:document.querySelector('#graphicsSetting').value,camera:Number(document.querySelector('#cameraSetting').value),autoSave:document.querySelector('#autoSaveSetting').checked,hints:document.querySelector('#hintsSetting').checked};saveSettings();if(gameSettings.music)startMusic();else stopMusic();if(typeof renderer!=='undefined'){const ratios={low:1,normal:Math.min(devicePixelRatio,1.5),high:Math.min(devicePixelRatio,2)};renderer.setPixelRatio(ratios[gameSettings.graphics]);renderer.shadowMap.enabled=gameSettings.graphics!=='low';controls.rotateSpeed=gameSettings.camera/10;controls.zoomSpeed=gameSettings.camera/10}document.querySelector('#hint').style.display=gameSettings.hints?'block':'none';document.querySelector('#settingsOverlay').classList.remove('open');toast('Réglages appliqués !');playSfx('success')}
+document.querySelector('#playGame').onclick=()=>{document.querySelector('#titleScreen').classList.add('hidden');if(gameSettings.music)startMusic();playSfx('success')};
+document.querySelector('#continueGame').onclick=()=>{document.querySelector('#titleScreen').classList.add('hidden');if(gameSettings.music)startMusic();playSfx('success')};
+document.querySelector('#openSettings').onclick=showSettings;document.querySelector('#gameSettings').onclick=showSettings;document.querySelector('#closeSettings').onclick=()=>document.querySelector('#settingsOverlay').classList.remove('open');document.querySelector('#applySettings').onclick=applySettings;document.querySelector('#resetSettings').onclick=()=>{gameSettings={...settingsDefaults};showSettings()};
+const root=document.querySelector('#game'), scene=new THREE.Scene();scene.background=new THREE.Color(0x9bd7f5);scene.fog=new THREE.Fog(0x9bd7f5,48,105);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,200);camera.position.set(24,29,31);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(gameSettings.graphics==='low'?1:gameSettings.graphics==='high'?Math.min(devicePixelRatio,2):Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=gameSettings.graphics!=='low';renderer.shadowMap.type=THREE.PCFSoftShadowMap;root.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,0,0);controls.enableDamping=true;controls.rotateSpeed=gameSettings.camera/10;controls.zoomSpeed=gameSettings.camera/10;controls.maxPolarAngle=Math.PI/2.08;controls.minDistance=12;controls.maxDistance=62;
+scene.add(new THREE.HemisphereLight(0xffffff,0x607b60,2));const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-18,36,20);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-35;sun.shadow.camera.right=35;sun.shadow.camera.top=35;sun.shadow.camera.bottom=-35;scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshStandardMaterial({color:0x72b66b,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.08;ground.receiveShadow=true;scene.add(ground);const grid=new THREE.GridHelper(24,24,0x426b46,0x8ac17b);grid.position.y=.015;scene.add(grid);
+const ray=new THREE.Raycaster(),pointer=new THREE.Vector2(),tiles=new Map(),vehicles=[],walkers=[];let selected='house',money=35000,pop=0,month=1,paused=false,speed=1,monthClock=0,monthIncome=0,monthExpense=0,happiness=65,showRoads=false;
+const taxRates={residential:6,commercial:7,industrial:9,electricity:5,water:5,services:4};
+let citizenMessage='Les premiers habitants attendent de découvrir votre ville.';
+const defs={
+ house:{name:'Maison individuelle',icon:'🏠',cost:700,upkeep:12,capacity:4,rent:95,kind:'res',tier:'low',jobs:0,desc:'Petite maison familiale. Faible loyer, capacité réduite.'},
+ apartment:{name:'Résidence',icon:'🏢',cost:2600,upkeep:45,capacity:18,rent:82,kind:'res',tier:'mid',jobs:0,desc:'Immeuble collectif, bon compromis densité et coût.'},
+ tower:{name:'Tour résidentielle',icon:'🏙️',cost:7200,upkeep:130,capacity:55,rent:115,kind:'res',tier:'high',jobs:0,desc:'Grande capacité et loyers élevés. Nécessite des services solides.'},
+ luxury:{name:'Résidence de luxe',icon:'🏰',cost:9800,upkeep:190,capacity:22,rent:260,kind:'res',tier:'lux',jobs:0,desc:'Peu de logements, loyers importants et forte exigence de bonheur.'},
+ shop:{name:'Commerces',icon:'🏬',cost:2200,upkeep:55,capacity:0,rent:0,kind:'work',jobs:12,desc:'Crée des emplois et augmente l’activité économique.'},
+ factory:{name:'Zone industrielle',icon:'🏭',cost:3800,upkeep:120,capacity:0,rent:0,kind:'work',jobs:35,desc:'Beaucoup d’emplois, mais pollution et dépenses élevées.'},
+ road:{name:'Route',icon:'🛣️',cost:120,upkeep:4,capacity:0,rent:0,kind:'infra',jobs:0,desc:'Relie les quartiers. Les bâtiments ont besoin d’une route adjacente.'},
+ park:{name:'Parc',icon:'🌳',cost:650,upkeep:18,capacity:0,rent:0,kind:'service',jobs:0,desc:'Améliore le bonheur des habitants proches.'},
+ power:{name:'Centrale électrique',icon:'⚡',cost:6500,upkeep:260,capacity:0,rent:0,kind:'utility',power:180,desc:'Produit 180 unités d’électricité par mois.'},
+ water:{name:'Station de pompage',icon:'💧',cost:5200,upkeep:190,capacity:0,rent:0,kind:'utility',water:180,desc:'Fournit 180 unités d’eau par mois.'},
+ school:{name:'École',icon:'🏫',cost:3600,upkeep:110,capacity:0,rent:0,kind:'service',jobs:8,desc:'Améliore l’éducation et le bonheur.'},
+ clinic:{name:'Clinique',icon:'🏥',cost:4800,upkeep:155,capacity:0,rent:0,kind:'service',jobs:10,desc:'Améliore la santé et le bonheur.'},
+ police:{name:'Poste de police',icon:'🚓',cost:4300,upkeep:145,capacity:0,rent:0,kind:'service',jobs:9,desc:'Améliore la sécurité.'},
+ fire:{name:'Caserne',icon:'🚒',cost:3900,upkeep:130,capacity:0,rent:0,kind:'service',jobs:8,desc:'Protège les quartiers contre les incendies.'}
+};
+const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.82});
+function cube(g,w,h,d,x,y,z,c){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;g.add(m);return m}
+function tree(g,x,z,s=1){let a=new THREE.Mesh(new THREE.CylinderGeometry(.1*s,.15*s,.65*s,7),mat(0x765034));a.position.set(x,.32*s,z);g.add(a);let b=new THREE.Mesh(new THREE.SphereGeometry(.48*s,9,7),mat(0x27864a));b.position.set(x,.83*s,z);b.castShadow=true;g.add(b)}
+function buildMesh(type,x,z){
+ const g=new THREE.Group();g.position.set(x,0,z);const def=defs[type];
+ if(type==='road'){cube(g,1,.08,1,0,.04,0,0x414954);cube(g,.07,.012,.28,0,.09,0,0xf4d35e)}
+ else if(type==='park'){cube(g,1,.1,1,0,.05,0,0x63b96b);tree(g,-.22,.12,.8);tree(g,.25,-.2,.9);tree(g,-.18,-.34,.55)}
+ else if(type==='power'){cube(g,.9,1.2,.85,0,.6,0,0x77818e);cube(g,.25,.8,.25,-.18,1.55,0,0xb8c5d1);cube(g,.25,.8,.25,.2,1.55,0,0xb8c5d1);cube(g,.45,.18,.45,0,2.05,0,0x596675)}
+ else if(type==='water'){cube(g,.8,.8,.8,0,.4,0,0x7ca9c7);let t=new THREE.Mesh(new THREE.CylinderGeometry(.32,.32,.8,12),mat(0x3b91c9));t.position.set(0,1.15,0);g.add(t);cube(g,.12,.6,.12,0,1.85,0,0x8da8b9)}
+ else if(type==='factory'){cube(g,.9,1,.85,0,.5,0,0x9b8872);cube(g,.25,1.1,.25,.23,1.45,-.15,0x665c59);cube(g,.25,.7,.25,-.25,1.25,.15,0x746963)}
+ else if(type==='clinic'||type==='school'||type==='police'||type==='fire'||type==='shop'){
+  const c=type==='clinic'?0xf1f1e8:type==='school'?0xe9d76b:type==='police'?0x658bb8:type==='fire'?0xd65c4c:0xe98d65;
+  cube(g,.88,1.15,.82,0,.575,0,c);cube(g,.94,.16,.9,0,1.23,0,type==='clinic'?0x4b9b86:type==='school'?0x9d3d39:type==='police'?0x31527c:type==='fire'?0x9d302d:0x347fba);
+  if(type==='clinic'){cube(g,.16,.55,.07,0,.75,.44,0xd74c4c);cube(g,.5,.14,.07,0,.75,.44,0xd74c4c)}
+  else {cube(g,.22,.22,.035,0,.8,.43,0x9de2f5)}
+ }else{
+  let h=type==='house'?1.25:type==='apartment'?2.4:type==='tower'?4.1:2.2,w=type==='tower'?.78:.82;
+  cube(g,w,h,w,0,h/2,0,type==='house'?0xf2c078:type==='apartment'?0x9eb8d2:type==='tower'?0x7898bb:0xe8d4b7);
+  if(type==='house'){let roof=new THREE.Mesh(new THREE.ConeGeometry(.68,.7,4),mat(0xb84e3c));roof.position.set(0,h+.3,0);roof.rotation.y=Math.PI/4;roof.castShadow=true;g.add(roof)}
+  else {for(let yy=.4;yy<h-.1;yy+=.48)for(let xx=-.22;xx<=.23;xx+=.44)cube(g,.17,.2,.025,xx,yy,.42,0x9de2f5);cube(g,.24,.55,.035,0,.28,.42,0x68452f)}
+  if(type==='luxury'){cube(g,.9,.18,.9,0,h+.09,0,0xc7a86a);tree(g,.58,-.25,.65)}
+ }
+ scene.add(g);return g;
+}
+function key(x,z){return `${x},${z}`}
+function count(type){return [...tiles.values()].filter(v=>v.type===type).length}
+function totals(){let housing=0,jobs=0,power=0,water=0,upkeep=0;for(const {type} of tiles.values()){let d=defs[type];housing+=d.capacity||0;jobs+=d.jobs||0;power+=d.power||0;water+=d.water||0;upkeep+=d.upkeep||0}return {housing,jobs,power,water,upkeep}}
+function utilityDemand(){let t=totals(),occupied=Math.min(pop,t.housing);return {pneed:Math.ceil(occupied*.75),wneed:Math.ceil(occupied*.9),...t}}
+function roadAccess(x,z){return [[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>tiles.get(key(x+a,z+b))?.type==='road')}
+function toast(s){let e=document.querySelector('#toast');e.textContent=s;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1900)}
+function add(type,x,z,loading=false){let k=key(x,z),d=defs[type];if(tiles.has(k))return false;if(!loading&&money<d.cost){toast("Fonds insuffisants !");return false}if(!loading)money-=d.cost;let obj=buildMesh(type,x,z);tiles.set(k,{type,obj,x,z});if(d.kind==='res'){}updateUI();return true}
+function removeAt(x,z){let k=key(x,z),v=tiles.get(k);if(!v)return;let d=defs[v.type];if(d.kind==='res')pop=Math.max(0,pop-Math.min(d.capacity,Math.floor(d.capacity*.7)));scene.remove(v.obj);tiles.delete(k);money+=Math.floor(d.cost*.35);updateUI();toast('Bâtiment démoli : remboursement 35 %')}
+function calcStats(){let t=totals(),res=[...tiles.values()].filter(v=>defs[v.type].kind==='res'),capacity=t.housing;let access=res.filter(v=>roadAccess(v.x,v.z)).reduce((a,v)=>a+defs[v.type].capacity,0);let demand=Math.max(0,Math.min(100,Math.round((capacity-pop+Math.max(0,t.jobs-pop*.45)*.12)*1.5)));let u=utilityDemand();let pRatio=u.pneed?Math.min(1,u.power/u.pneed):1,wRatio=u.wneed?Math.min(1,u.water/u.wneed):1;let roadRatio=capacity?access/capacity:1;let services=Math.min(1,(count('school')+count('clinic')+count('police')+count('fire')+count('park'))/Math.max(1,Math.ceil(pop/65)));let jobRatio=pop?Math.min(1,t.jobs/(pop*.45)):1;let avgTax=(taxRates.residential+taxRates.commercial+taxRates.industrial+taxRates.electricity+taxRates.water+taxRates.services)/6;
+let taxPenalty=Math.max(0,avgTax-8)*1.25;
+let happiness=Math.max(5,Math.min(100,Math.round(28+25*pRatio+20*wRatio+12*roadRatio+10*services+8*jobRatio-(count('factory')*3)-taxPenalty)));return {t,u,demand,pRatio,wRatio,roadRatio,services,jobRatio,happiness,access}}
+function monthEnd(){
+ let s=calcStats(),res=[...tiles.values()].filter(v=>defs[v.type].kind==='res'),capacity=s.t.housing;
+ let accessibleCapacity=res.filter(v=>roadAccess(v.x,v.z)).reduce((a,v)=>a+defs[v.type].capacity,0);
+ let utilityFactor=Math.min(s.pRatio,s.wRatio),roadFactor=capacity?accessibleCapacity/capacity:1;
+ let jobFactor=pop?Math.min(1,s.t.jobs/(pop*.45)):1;
+ let taxAvg=(taxRates.residential+taxRates.commercial+taxRates.industrial+taxRates.electricity+taxRates.water+taxRates.services)/6;
+ let attractiveness=Math.max(0,Math.min(1,(s.happiness/100)*.55+utilityFactor*.2+roadFactor*.15+jobFactor*.1));
+ let desired=Math.floor(Math.min(capacity,accessibleCapacity+(capacity-accessibleCapacity)*.2)*attractiveness);
+ let maxArrivals=Math.max(1,Math.ceil(Math.max(10,capacity)*.12));
+ let arrivals=Math.min(Math.max(0,desired-pop),maxArrivals);
+ let departureRate=(s.happiness<35?.22:s.happiness<50?.12:s.happiness<65?.05:0)+
+   (utilityFactor<.5?.12:utilityFactor<.95?.05:0)+(taxAvg>18?.12:taxAvg>13?.05:0)+(jobFactor<.45?.08:0);
+ let departures=Math.min(pop,Math.ceil(pop*Math.min(.65,departureRate)));
+ pop=Math.max(0,Math.min(capacity,pop+arrivals-departures));
+ let avgRent=res.length?res.reduce((a,v)=>a+defs[v.type].rent*defs[v.type].capacity,0)/Math.max(1,res.reduce((a,v)=>a+defs[v.type].capacity,0)):0;
+ let rent=Math.floor(pop*avgRent);
+ let resTax=Math.floor(pop*18*taxRates.residential/10);
+ let commercialJobs=count('shop')*defs.shop.jobs,industrialJobs=count('factory')*defs.factory.jobs;
+ let commercialTax=Math.floor(commercialJobs*14*taxRates.commercial/10);
+ let industrialTax=Math.floor(industrialJobs*12*taxRates.industrial/10);
+ let powerTax=Math.floor(s.u.pneed*1.8*taxRates.electricity/10);
+ let waterTax=Math.floor(s.u.wneed*1.2*taxRates.water/10);
+ let serviceCount=count('school')+count('clinic')+count('police')+count('fire');
+ let serviceTax=Math.floor(serviceCount*90*taxRates.services/10);
+ let taxes=resTax+commercialTax+industrialTax+powerTax+waterTax+serviceTax;
+ let utilityCost=s.u.pneed*1.8+s.u.wneed*1.2;
+ let expense=s.t.upkeep+utilityCost;
+ let income=rent+taxes+Math.floor(s.t.jobs*3);
+ let balance=income-expense;money+=balance;monthIncome=income;monthExpense=expense;month++;happiness=calcStats().happiness;
+ if(arrivals>0){citizenMessage=`${arrivals} nouveaux habitants arrivent : ils apprécient les logements disponibles et les services.`}
+ else if(departures>0){citizenMessage=`${departures} habitants quittent la ville. Ils se plaignent de ${s.happiness<45?'la qualité de vie':utilityFactor<.95?'manques d’eau ou d’électricité':taxAvg>13?'taxes trop élevées':'manque d’emplois'}.`}
+ else if(pop>=capacity){citizenMessage='Les habitants demandent de nouveaux logements : la capacité est presque atteinte.'}
+ else {citizenMessage=residentWish(s,capacity,accessibleCapacity,jobFactor,utilityFactor,taxAvg)}
+ if(gameSettings.autoSave)save();
+ if(money<0)toast('Attention : la ville est endettée ! Réduis les dépenses.');
+ else toast(`Mois ${month-1} terminé : ${arrivals} arrivées, ${departures} départs, ${balance>=0?'+':''}${balance.toLocaleString('fr-FR')} €`);
+ updateUI();if(month%3===0)showNotice();
+}
+function residentWish(s,capacity,accessibleCapacity,jobFactor,utilityFactor,taxAvg){
+ if(s.pRatio<.95)return 'Habitants : « Nous avons besoin de plus d’électricité ! »';
+ if(s.wRatio<.95)return 'Habitants : « Il nous faut davantage d’eau potable. »';
+ if(capacity-pop<8)return 'Habitants : « Construisez de nouveaux logements, s’il vous plaît ! »';
+ if(jobFactor<.7)return 'Habitants : « Nous aimerions trouver davantage de travail en ville. »';
+ if(s.roadRatio<.8)return 'Habitants : « Certaines rues ne sont pas bien reliées aux quartiers. »';
+ if(taxAvg>13)return 'Habitants : « Les taxes deviennent trop lourdes pour nous. »';
+ if(count('school')===0)return 'Familles : « Pourriez-vous construire une école ? »';
+ if(count('park')===0)return 'Habitants : « Un parc ou un espace vert serait agréable. »';
+ return 'Habitants : « La ville est agréable ! Continuons à améliorer les quartiers. »';
+}
+function showNotice(){let s=calcStats(),txt=s.demand>55?'Les habitants réclament davantage de logements.':s.pRatio<1?'La ville manque d’électricité.':s.wRatio<1?'La ville manque d’eau.':s.jobRatio<.65?'Il manque des emplois.':'La ville se développe correctement.';document.querySelector('#status').textContent=txt;document.querySelector('#citizenVoice').textContent=citizenMessage}
+function updateUI(){let s=calcStats();document.querySelector('#money').textContent=money.toLocaleString('fr-FR')+' €';document.querySelector('#people').textContent=pop.toLocaleString('fr-FR');document.querySelector('#homes').textContent=s.t.housing.toLocaleString('fr-FR')+' places';document.querySelector('#date').textContent='Mois '+month;document.querySelector('#balance').textContent=(monthIncome-monthExpense>=0?'+':'')+(monthIncome-monthExpense).toLocaleString('fr-FR')+' €/mois';document.querySelector('#power').textContent=`${s.u.power} / ${s.u.pneed}`;document.querySelector('#water').textContent=`💧 ${s.u.water} / ${s.u.wneed} eau`;document.querySelector('#happiness').textContent=s.happiness+'%';document.querySelector('#happybar').style.width=s.happiness+'%';document.querySelector('#demand').textContent=s.demand>60?'Très élevée':s.demand>30?'Moyenne':'Faible';document.querySelector('#demandbar').style.width=s.demand+'%';document.querySelector('#jobs').textContent=`${s.t.jobs} / ${Math.ceil(pop*.45)}`;document.querySelector('#tools').innerHTML=Object.entries(defs).map(([k,d])=>`<button class="tool ${selected===k?'active':''}" data-type="${k}"><span class="ico">${d.icon}</span><span>${d.name}<small>${d.cost.toLocaleString('fr-FR')} € • entretien ${d.upkeep} €/mois</small></span></button>`).join('');document.querySelectorAll('.tool').forEach(b=>b.onclick=()=>{selected=b.dataset.type;updateUI()})}
+renderer.domElement.addEventListener('pointerdown',e=>{if(e.target!==renderer.domElement)return;pointer.x=e.clientX/innerWidth*2-1;pointer.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(pointer,camera);let hit=ray.intersectObject(ground)[0];if(!hit)return;let x=Math.round(hit.point.x),z=Math.round(hit.point.z);if(Math.abs(x)>11||Math.abs(z)>11)return;if(selected==='demolish')removeAt(x,z);else if(add(selected,x,z)){toast(defs[selected].name+' construit !');playSfx('build')}});
+function openModal(title,body){document.querySelector('#dialogContent').innerHTML=`<h2>${title}</h2>${body}`;document.querySelector('#modal').classList.add('open')}
+document.querySelector('#close').onclick=()=>document.querySelector('#modal').classList.remove('open');
+document.querySelector('#economy').onclick=()=>{let s=calcStats(),res=[...tiles.values()].filter(v=>defs[v.type].kind==='res'),r=0;res.forEach(v=>{let d=defs[v.type];r+=d.capacity*d.rent});openModal('💶 Budget mensuel',`<div class="cards"><div class="info">Loyers théoriques<br><b>${Math.round(r).toLocaleString('fr-FR')} €</b></div><div class="info">Taxes habitants<br><b>${(pop*18).toLocaleString('fr-FR')} €</b></div><div class="info">Entretien bâtiments<br><b>${s.t.upkeep.toLocaleString('fr-FR')} €</b></div><div class="info">Eau + électricité<br><b>${Math.round(s.u.pneed*1.8+s.u.wneed*1.2).toLocaleString('fr-FR')} €</b></div></div><p>Les loyers réellement encaissés dépendent du nombre de logements occupés. Les revenus et dépenses sont calculés à chaque fin de mois de jeu.</p><p>Dernier bilan : <b>${monthIncome.toLocaleString('fr-FR')} €</b> de recettes et <b>${monthExpense.toLocaleString('fr-FR')} €</b> de dépenses.</p>`)}
+document.querySelector('#taxes').onclick=()=>{
+ const labels={residential:'Habitations',commercial:'Commerces',industrial:'Industries',electricity:'Électricité',water:'Eau',services:'Services publics'};
+ let controls=Object.entries(labels).map(([k,label])=>`<div class="row"><label for="tax-${k}">${label}</label><b id="taxval-${k}">${taxRates[k]}%</b></div><input id="tax-${k}" type="range" min="0" max="30" value="${taxRates[k]}" style="width:100%;accent-color:#ffd166;margin:0 0 9px" oninput="document.getElementById('taxval-${k}').textContent=this.value+'%';window.setCityTax('${k}',this.value)">`).join('');
+ openModal('⚖️ Régler les taxes',`<p>Choisis un taux pour chaque catégorie. Des taxes plus élevées rapportent davantage, mais peuvent réduire le bonheur et pousser des habitants à partir. Les changements sont appliqués au prochain mois.</p>${controls}<p class="muted">0 % = aucune taxe • 30 % = taxe très élevée</p>`);
+};
+window.setCityTax=(k,v)=>{taxRates[k]=Number(v);updateUI()};
+document.querySelector('#speed').onclick=e=>{
+ const speeds=[1,2,4,8],i=speeds.indexOf(speed);speed=speeds[(i+1)%speeds.length];
+ e.currentTarget.textContent=`⏩ Vitesse ×${speed}`;document.querySelector('#time').textContent=`Vitesse ×${speed}`;toast(`Vitesse du jeu : ×${speed}`);
+};
+document.querySelector('#services').onclick=()=>{let s=calcStats();openModal('🚰 Services essentiels',`<div class="row"><span>Électricité produite / demandée</span><b>${s.u.power} / ${s.u.pneed}</b></div><div class="bar ${s.pRatio<1?'bad':''}"><i style="width:${s.pRatio*100}%"></i></div><div class="row"><span>Eau produite / demandée</span><b>${s.u.water} / ${s.u.wneed}</b></div><div class="bar ${s.wRatio<1?'bad':''}"><i style="width:${s.wRatio*100}%"></i></div><div class="row"><span>Accès routier aux logements</span><b>${Math.round(s.roadRatio*100)}%</b></div><div class="row"><span>Emplois disponibles</span><b>${s.t.jobs}</b></div><p>Une centrale fournit 180 unités d’électricité. Une station de pompage fournit 180 unités d’eau. Les logements consomment ces ressources selon leur occupation. Construis une route adjacente à chaque logement pour permettre un accès fiable.</p>`)}
+document.querySelector('#roads').onclick=e=>{showRoads=!showRoads;e.currentTarget.classList.toggle('active',showRoads);toast(showRoads?'Conseil : relie les bâtiments aux routes.':'Affichage normal')};
+document.querySelector('#rotate').onclick=()=>{camera.position.set(24,29,31);controls.target.set(0,0,0);controls.update()};
+document.querySelector('#pause').onclick=e=>{paused=!paused;e.currentTarget.textContent=paused?'▶ Reprendre':'⏸ Pause'};
+function save(){let data={money,pop,month,taxRates,tiles:[...tiles.entries()].map(([k,v])=>({k,type:v.type}))};localStorage.setItem('ma-ville-3d-v3',JSON.stringify(data));toast('Ville sauvegardée sur cet appareil !')}
+document.querySelector('#save').onclick=save;
+let old=localStorage.getItem('ma-ville-3d-v3');if(old){try{let d=JSON.parse(old);money=d.money??35000;pop=d.pop??0;month=d.month??1;if(d.taxRates)Object.assign(taxRates,d.taxRates);for(let t of d.tiles||[]){let [x,z]=t.k.split(',').map(Number);add(t.type,x,z,true)}updateUI();toast('Sauvegarde chargée')}catch(e){}}
+function vehicle(){let g=new THREE.Group();let body=cube(g,.28,.16,.48,0,.18,0,Math.random()>.5?0xd94c4c:0x3b72bb);for(let x of [-.13,.13])for(let z of [-.15,.15]){let w=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.035,8),mat(0x20242b));w.rotation.z=Math.PI/2;w.position.set(x,.08,z);g.add(w)}scene.add(g);return g}
+function spawnCars(){for(let i=0;i<6;i++){let v=vehicle();v.position.set(-11+i*4,.02,0);vehicles.push({obj:v,t:i/6})}}
+spawnCars();
+function pedestrians(){for(let i=0;i<10;i++){let g=new THREE.Group();let torso=new THREE.Mesh(new THREE.CapsuleGeometry(.07,.22,3,6),mat([0x315f9b,0xc45d43,0x6d8c55,0x785a9e][i%4]));torso.position.y=.25;g.add(torso);scene.add(g);walkers.push({obj:g,t:i/10})}}pedestrians();
+let last=performance.now();function animate(now){requestAnimationFrame(animate);let dt=Math.min(.05,(now-last)/1000);last=now;controls.update();if(!paused){monthClock+=dt*speed;if(monthClock>=24){monthClock=0;monthEnd()}vehicles.forEach((v,i)=>{v.t=(v.t+dt*.035)%1;let x=-11+v.t*22;v.obj.position.set(x,.02,(i%2)*2-1);v.obj.rotation.y=0});walkers.forEach((w,i)=>{w.t=(w.t+dt*.018)%1;let a=w.t*Math.PI*2;w.obj.position.set(Math.cos(a)*(4+i%3),0,Math.sin(a)*(4+i%3));w.obj.rotation.y=-a})}renderer.render(scene,camera)}
+requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});updateUI();document.querySelector('#hint').style.display=gameSettings.hints?'block':'none';
+</script></body></html>
