@@ -1,177 +1,555 @@
 <!doctype html>
 <html lang="fr">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Ma Ville 3D — Gestion urbaine</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101c2e">
+<meta name="description" content="Nexus City : jeu de construction et de gestion urbaine en 2D et 3D.">
+<title>Nexus City — Constructeur de villes</title>
 <style>
-:root{--bg:#101a2b;--panel:#142238ee;--panel2:#1d3049;--line:#ffffff20;--gold:#ffd166;--green:#75df9b;--red:#ff7777;--muted:#a9bdd0}
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#9bd7f5;color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}button{font:inherit;color:inherit;cursor:pointer}#game{position:fixed;inset:0}canvas{display:block}
-#hud{position:fixed;top:env(safe-area-inset-top,8px);left:8px;right:8px;display:flex;gap:6px;align-items:stretch;pointer-events:none;flex-wrap:wrap}.metric{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:7px 10px;min-width:80px;box-shadow:0 5px 18px #18324b30;font-size:11px}.metric b{display:block;font-size:15px;color:var(--gold);white-space:nowrap}.metric small{color:var(--muted)}
-#side{position:fixed;top:100px;left:9px;bottom:110px;width:205px;display:flex;flex-direction:column;gap:7px;pointer-events:none}.panel{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;box-shadow:0 8px 25px #0b142744;backdrop-filter:blur(8px)}.panel h3{margin:0 0 7px;font-size:13px}.muted{color:var(--muted);font-size:11px;line-height:1.35}.bar{height:7px;background:#ffffff20;border-radius:8px;overflow:hidden;margin:4px 0 7px}.bar i{display:block;height:100%;background:var(--green);width:50%}.bar.warn i{background:var(--gold)}.bar.bad i{background:var(--red)}
-#tools{display:flex;flex-direction:column;gap:5px;overflow:auto;max-height:45vh}.tool{display:flex;align-items:center;gap:8px;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px;font-size:11px}.tool .ico{font-size:20px;width:26px;text-align:center}.tool small{display:block;color:var(--muted)}.tool.active{border:2px solid var(--gold);background:#354965}
-#bottom{position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap}.action{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:9px 11px;font-size:11px}.action.active{border-color:var(--gold);color:var(--gold)}#hint{position:fixed;left:50%;transform:translateX(-50%);bottom:75px;background:#101a2be8;border:1px solid var(--line);padding:7px 12px;border-radius:20px;font-size:11px;white-space:nowrap;pointer-events:none}
-#toast{position:fixed;top:75px;left:50%;transform:translateX(-50%);background:#101a2bf2;border:1px solid var(--line);padding:9px 14px;border-radius:12px;font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:5}#toast.show{opacity:1}
-#modal{display:none;position:fixed;inset:0;background:#07101dcc;z-index:4;align-items:center;justify-content:center;padding:16px}#modal.open{display:flex}#dialog{width:min(560px,100%);max-height:82vh;overflow:auto;background:#142238;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 20px 70px #0008}#dialog h2{font-size:18px;margin:0 0 10px}#dialog p,#dialog li{font-size:12px;line-height:1.5;color:#d5e2ef}#dialog .close{float:right}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.info{background:#1d3049;border:1px solid var(--line);border-radius:12px;padding:10px;font-size:12px}.info b{color:var(--gold)}.row{display:flex;justify-content:space-between;gap:8px;margin:5px 0;font-size:12px}
-@media(max-width:650px){#side{top:103px;left:7px;width:165px;bottom:125px}#side .panel{padding:8px}#side .panel h3{font-size:12px}#tools{max-height:35vh}.metric{min-width:65px;padding:6px 8px}.metric b{font-size:13px}#hint{bottom:116px;font-size:10px}.action{padding:8px;font-size:10px}#bottom{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap}#bottom .action{flex:0 0 auto}.cards{grid-template-columns:1fr 1fr}}
-</style></head>
-<body><div id="game"></div>
-<div id="hud">
- <div class="metric">💰 Trésorerie<b id="money">35 000 €</b><small id="balance">+0 €/mois</small></div>
- <div class="metric">👥 Population<b id="people">0</b><small id="homes">0 logements</small></div>
- <div class="metric">📅 Date<b id="date">Mois 1</b><small id="time">Vitesse ×1</small></div>
- <div class="metric">⚡ Électricité<b id="power">0 / 0</b><small id="water">💧 0 / 0 eau</small></div>
-</div>
-<aside id="side">
- <section class="panel"><h3>📊 État de la ville</h3>
-  <div class="row"><span>Bonheur</span><b id="happiness">50%</b></div><div class="bar"><i id="happybar"></i></div>
-  <div class="row"><span>Demande logement</span><b id="demand">Élevée</b></div><div class="bar"><i id="demandbar"></i></div>
-  <div class="row"><span>Emplois</span><b id="jobs">0 / 0</b></div>
-  <div class="muted" id="status">Construis des logements, puis assure les services essentiels.</div><div style="height:1px;background:#ffffff20;margin:7px 0"></div><h3>💬 Voix des habitants</h3><div class="muted" id="citizenVoice">Les premiers habitants attendent de découvrir votre ville.</div>
- </section>
- <section class="panel"><h3>🏗️ Construire <small class="muted">— sélectionne puis touche le terrain</small></h3><div id="tools"></div></section>
+:root{--navy:#101c2e;--panel:rgba(15,29,48,.94);--panel2:#213450;--accent:#f9c96e;--green:#64dfac;--muted:#aec0d2;--line:rgba(255,255,255,.13);--shadow:0 14px 44px #0713216b}
+*{box-sizing:border-box}html,body{margin:0;height:100%;width:100%;overflow:hidden;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f3f8ff;background:#7cb6d9}button,input,select{font:inherit}button{cursor:pointer;color:inherit;touch-action:manipulation}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}#world{display:block;position:fixed;inset:0;width:100%;height:100%;touch-action:none;outline:none}
+.topbar{position:fixed;z-index:2;left:14px;right:14px;top:max(12px,env(safe-area-inset-top));display:flex;align-items:flex-start;justify-content:space-between;gap:10px;pointer-events:none}.topbar>*{pointer-events:auto}.brand,.stat,.sidebar,.pill,.circle,.bottom-area,.help-line,.selection-info{backdrop-filter:blur(14px);box-shadow:var(--shadow)}.brand{display:flex;gap:10px;align-items:center;border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:10px 15px;min-width:180px}.brand-mark{font-size:29px;color:var(--accent)}.brand strong{display:block;font-size:15px;letter-spacing:1.5px}.brand em{font-style:normal;color:var(--accent)}.brand small{display:block;color:var(--muted);font-size:11px;margin-top:2px}.stats{display:flex;gap:8px;align-items:stretch}.stat{min-width:122px;border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:9px 13px}.stat span{color:var(--muted);display:block;font-size:11px}.stat strong{display:block;font-size:17px;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}.stat.money{min-width:205px;text-align:right}.stat.money strong{font-size:21px;color:var(--accent)}.stat.money small{font-size:11px;color:var(--green)}.stat.money small.negative{color:#ff9292}
+.sidebar{position:fixed;z-index:2;top:97px;left:14px;width:245px;border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:14px}.side-heading{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.7px;margin-bottom:12px}.icon-button{border:1px solid var(--line);border-radius:7px;background:var(--panel2);width:26px;height:25px}.meter-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;gap:8px;margin:10px 0 5px}.meter-row b{font-variant-numeric:tabular-nums}.meter{height:7px;background:#ffffff25;border-radius:12px;overflow:hidden}.meter i{display:block;width:0;background:var(--green);height:100%;transition:width .2s}.meter i.warn{background:var(--accent)}.meter i.danger{background:#ff807b}.brief{margin:14px 0 12px;background:#ffffff0b;border-radius:10px;padding:9px;color:#d9e8f5;font-size:12px;line-height:1.4}.wide{width:100%}
+.map-controls{position:fixed;z-index:2;right:15px;top:205px;display:flex;flex-direction:column;gap:7px}.circle{width:41px;height:41px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-size:23px}.top-actions{position:fixed;right:14px;top:107px;display:flex;gap:6px;z-index:3;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 285px)}.pill,.secondary{border:1px solid var(--line);background:var(--panel);border-radius:11px;padding:9px 12px;font-size:12px;font-weight:650}.pill.active{background:#3c5d69;border-color:var(--accent)}
+.bottom-area{position:fixed;z-index:3;bottom:max(36px,calc(env(safe-area-inset-bottom) + 32px));left:13px;right:13px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:9px 11px 8px;display:grid;gap:8px;max-width:1250px;margin:auto}.tool-options{display:flex;align-items:center;gap:7px}.mode{background:var(--panel2);border:1px solid var(--line);border-radius:9px;font-size:11px;padding:6px 10px}.mode.active,.category.active,.build-item.active{background:#405c73;border-color:var(--accent);color:#fff}.chosen{color:var(--accent);font-size:12px;margin-left:auto;white-space:nowrap}.build-items,.categories{display:flex;gap:7px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#ffffff45 transparent;padding:1px 0 5px}.build-item{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel2);border-radius:10px;flex:0 0 auto;padding:7px 10px;text-align:left;min-width:125px}.build-item .emoji{font-size:22px}.build-item b{font-size:11px;display:block}.build-item small{font-size:10px;color:var(--muted);white-space:nowrap}.build-item:disabled{opacity:.45;cursor:not-allowed}.category{flex:1 0 auto;min-width:95px;font-weight:700;font-size:11px;padding:9px 12px;background:#ffffff09;border:1px solid transparent;border-radius:9px}.help-line{position:fixed;z-index:2;bottom:4px;left:50%;transform:translateX(-50%);font-size:11px;text-align:center;background:var(--panel);border-radius:10px;padding:5px 12px;max-width:calc(100vw - 20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.selection-info{position:fixed;z-index:2;left:50%;transform:translateX(-50%);top:120px;border-radius:10px;padding:8px 12px;background:var(--panel);font-size:12px;text-align:center}.selection-info[hidden]{display:none}
+#toast{position:fixed;top:175px;left:50%;transform:translateX(-50%) translateY(-6px);z-index:6;max-width:min(500px,90vw);background:#122940f4;border:1px solid #f9c96e88;border-radius:12px;padding:11px 16px;pointer-events:none;text-align:center;opacity:0;transition:opacity .2s,transform .2s;font-size:13px}#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.overlay{position:fixed;inset:0;z-index:10;background:rgba(5,15,30,.82);display:none;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(5px)}.overlay.open{display:flex}.modal{width:min(760px,100%);max-height:min(90vh,850px);overflow-y:auto;border:1px solid #ffffff34;background:linear-gradient(160deg,#1b3049,#0e1e33);border-radius:22px;box-shadow:0 25px 100px #000b;padding:24px}.modal h1{font-size:32px;letter-spacing:2px;margin:2px 0 4px}.modal h1 em{font-style:normal;color:var(--accent)}.modal h2{font-size:22px;margin:4px 0 12px}.modal h3{font-size:15px;margin:16px 0 8px}.modal p{color:#c5d5e5;line-height:1.5;font-size:13px}.modal-sub{font-size:12px;color:var(--muted)}.modal-header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.close{border:1px solid var(--line);background:var(--panel2);border-radius:9px;padding:8px 11px}.slot-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:19px 0 10px}.slot{border:1px solid var(--line);background:#ffffff0b;border-radius:15px;padding:15px;min-height:165px;display:flex;flex-direction:column;align-items:flex-start;gap:10px}.slot h3{margin:0}.slot p{margin:0}.slot .slot-actions{margin-top:auto;display:flex;gap:7px;flex-wrap:wrap}.primary,.danger-button{border:none;border-radius:9px;padding:10px 14px;font-size:12px;font-weight:800}.primary{color:#112437;background:var(--accent)}.primary:disabled{opacity:.5;cursor:not-allowed}.danger-button{color:#ffd2cd;background:#803f4c}.field{margin:12px 0}.field label{display:block;font-weight:650;font-size:13px;margin-bottom:6px}.field input:not([type=checkbox]),.field select{width:100%;padding:11px;background:#0c1b2d;color:#fff;border:1px solid #ffffff39;border-radius:9px}.field input[type=checkbox]{accent-color:var(--accent);width:17px;height:17px;vertical-align:middle;margin-right:7px}.checkbox-row{display:flex;gap:8px;align-items:center;margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:9px}.checkbox-row label{font-size:13px}.form-grid,.summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.summary{background:#ffffff0d;border:1px solid var(--line);padding:13px;border-radius:12px}.summary span{display:block;color:var(--muted);font-size:11px}.summary strong{display:block;font-size:19px;margin-top:4px;overflow-wrap:anywhere}.listrow{padding:8px 0;border-bottom:1px solid var(--line);display:flex;gap:10px;justify-content:space-between;font-size:12px}.listrow span{color:#cad9e7}.listrow b{text-align:right}.button-row{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.btn-card{background:#ffffff0c;border:1px solid var(--line);border-radius:12px;padding:13px;min-width:145px;text-align:left;flex:1 1 150px}.btn-card b{display:block;color:var(--accent)}.btn-card small{color:var(--muted)}.chip{display:inline-block;padding:4px 8px;border-radius:99px;background:#2e4663;font-size:10px;color:#cce3ed}.note{padding:9px 12px;background:#ffffff0c;border-radius:9px;color:#c4d4e4;font-size:12px;margin:13px 0}.modal button:hover:not(:disabled){filter:brightness(1.12)}
+@media(max-width:950px){.brand{min-width:0}.stat{min-width:0}.stat.money{min-width:145px}.sidebar{top:166px}.top-actions{max-width:none;left:12px;right:12px;top:98px;justify-content:flex-start}.map-controls{top:168px}}
+@media(max-width:630px){.topbar{left:7px;right:7px;top:max(5px,env(safe-area-inset-top));gap:4px}.brand{padding:7px;min-width:91px;gap:4px}.brand-mark{font-size:17px}.brand strong{font-size:10px;letter-spacing:.3px}.brand small{display:none}.stats{gap:4px}.stat{padding:7px;min-width:50px;border-radius:10px}.stat span{font-size:9px}.stat strong{font-size:11px}.stat.money{min-width:93px}.stat.money strong{font-size:12px}.stat.money small{font-size:9px}.top-actions{top:68px;left:7px;right:7px;gap:4px}.pill{padding:8px;font-size:10px}.sidebar{top:116px;left:7px;width:165px;padding:8px;border-radius:12px}.side-heading{font-size:9px;margin-bottom:7px}.meter-row{font-size:10px;margin:7px 0 3px}.brief{font-size:10px;padding:6px;margin:9px 0}.sidebar .secondary{font-size:10px;padding:7px}.map-controls{right:8px;top:119px;gap:5px}.circle{width:33px;height:33px;font-size:20px}.selection-info{top:270px;font-size:10px;max-width:80%}.bottom-area{left:5px;right:5px;bottom:max(27px,env(safe-area-inset-bottom));border-radius:13px;padding:6px;gap:5px}.tool-options{gap:4px}.mode{padding:5px 7px;font-size:10px}.chosen{font-size:10px}.build-item{padding:6px;min-width:105px}.build-item .emoji{font-size:18px}.build-item b{font-size:10px}.build-item small{font-size:9px}.category{min-width:83px;padding:8px 9px;font-size:10px}.help-line{font-size:9px;bottom:0}.modal{padding:15px;max-height:91vh}.modal h1{font-size:25px}.slot-grid{grid-template-columns:1fr;margin:12px 0}.slot{min-height:0}.form-grid,.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.summary strong{font-size:15px}#toast{top:110px}}
+
+</style>
+</head>
+<body>
+<canvas id="world" aria-label="Carte de la ville" tabindex="0"></canvas>
+<header class="topbar" id="topbar">
+  <div class="brand"><span class="brand-mark">◆</span><span><strong>NEXUS <em>CITY</em></strong><small id="worldTitle">Simulateur de villes</small></span></div>
+  <div class="stats">
+    <div class="stat"><span>👥 Habitants</span><strong id="population">0</strong></div>
+    <div class="stat"><span>📅 Date</span><strong id="month">Janvier 2026</strong></div>
+    <div class="stat money"><span>💰 Trésorerie</span><strong id="money">—</strong><small id="monthlyBalance">+0 € / mois</small></div>
+  </div>
+</header>
+<aside class="sidebar" id="sidebar">
+  <div class="side-heading"><strong>TABLEAU DE BORD</strong><button class="icon-button" id="collapseStatus" title="Afficher/masquer les informations">−</button></div>
+  <div id="statusContents">
+    <div class="meter-row"><span>🙂 Satisfaction</span><b id="happiness">—</b></div><div class="meter"><i id="happinessBar"></i></div>
+    <div class="meter-row"><span>⚡ Électricité</span><b id="power">—</b></div><div class="meter"><i id="powerBar"></i></div>
+    <div class="meter-row"><span>💧 Eau</span><b id="water">—</b></div><div class="meter"><i id="waterBar"></i></div>
+    <div class="meter-row"><span>🚗 Trafic</span><b id="traffic">—</b></div><div class="meter"><i id="trafficBar"></i></div>
+    <div class="meter-row"><span>💼 Emplois</span><b id="jobs">—</b></div>
+    <div class="brief" id="cityMessage">Choisis un terrain pour construire ta ville.</div>
+    <button class="secondary wide" id="cityInfo">📊 Voir les détails de la ville</button>
+  </div>
 </aside>
-<div id="bottom">
- <button class="action" id="roads">🛣️ Voir routes</button><button class="action" id="economy">💶 Budget</button><button class="action" id="taxes">⚖️ Taxes</button><button class="action" id="services">🚑 Services</button><button class="action" id="rotate">⟳ Recentrer</button><button class="action" id="save">💾 Sauvegarder</button><button class="action" id="speed">⏩ Vitesse ×1</button><button class="action" id="pause">⏸ Pause</button>
-</div><div id="hint">Choisis une construction puis touche une case libre • Fais glisser pour tourner • Pince pour zoomer</div><div id="toast"></div>
-<div id="modal"><div id="dialog"><button class="action close" id="close">Fermer ✕</button><div id="dialogContent"></div></div></div>
-<script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
-const root=document.querySelector('#game'), scene=new THREE.Scene();scene.background=new THREE.Color(0x9bd7f5);scene.fog=new THREE.Fog(0x9bd7f5,48,105);
-const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,200);camera.position.set(24,29,31);
-const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;root.appendChild(renderer.domElement);
-const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,0,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI/2.08;controls.minDistance=12;controls.maxDistance=62;
-scene.add(new THREE.HemisphereLight(0xffffff,0x607b60,2));const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-18,36,20);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-35;sun.shadow.camera.right=35;sun.shadow.camera.top=35;sun.shadow.camera.bottom=-35;scene.add(sun);
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshStandardMaterial({color:0x72b66b,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.08;ground.receiveShadow=true;scene.add(ground);const grid=new THREE.GridHelper(24,24,0x426b46,0x8ac17b);grid.position.y=.015;scene.add(grid);
-const ray=new THREE.Raycaster(),pointer=new THREE.Vector2(),tiles=new Map(),vehicles=[],walkers=[];let selected='house',money=35000,pop=0,month=1,paused=false,speed=1,monthClock=0,monthIncome=0,monthExpense=0,happiness=65,showRoads=false;
-const taxRates={residential:6,commercial:7,industrial:9,electricity:5,water:5,services:4};
-let citizenMessage='Les premiers habitants attendent de découvrir votre ville.';
-const defs={
- house:{name:'Maison individuelle',icon:'🏠',cost:700,upkeep:12,capacity:4,rent:95,kind:'res',tier:'low',jobs:0,desc:'Petite maison familiale. Faible loyer, capacité réduite.'},
- apartment:{name:'Résidence',icon:'🏢',cost:2600,upkeep:45,capacity:18,rent:82,kind:'res',tier:'mid',jobs:0,desc:'Immeuble collectif, bon compromis densité et coût.'},
- tower:{name:'Tour résidentielle',icon:'🏙️',cost:7200,upkeep:130,capacity:55,rent:115,kind:'res',tier:'high',jobs:0,desc:'Grande capacité et loyers élevés. Nécessite des services solides.'},
- luxury:{name:'Résidence de luxe',icon:'🏰',cost:9800,upkeep:190,capacity:22,rent:260,kind:'res',tier:'lux',jobs:0,desc:'Peu de logements, loyers importants et forte exigence de bonheur.'},
- shop:{name:'Commerces',icon:'🏬',cost:2200,upkeep:55,capacity:0,rent:0,kind:'work',jobs:12,desc:'Crée des emplois et augmente l’activité économique.'},
- factory:{name:'Zone industrielle',icon:'🏭',cost:3800,upkeep:120,capacity:0,rent:0,kind:'work',jobs:35,desc:'Beaucoup d’emplois, mais pollution et dépenses élevées.'},
- road:{name:'Route',icon:'🛣️',cost:120,upkeep:4,capacity:0,rent:0,kind:'infra',jobs:0,desc:'Relie les quartiers. Les bâtiments ont besoin d’une route adjacente.'},
- park:{name:'Parc',icon:'🌳',cost:650,upkeep:18,capacity:0,rent:0,kind:'service',jobs:0,desc:'Améliore le bonheur des habitants proches.'},
- power:{name:'Centrale électrique',icon:'⚡',cost:6500,upkeep:260,capacity:0,rent:0,kind:'utility',power:180,desc:'Produit 180 unités d’électricité par mois.'},
- water:{name:'Station de pompage',icon:'💧',cost:5200,upkeep:190,capacity:0,rent:0,kind:'utility',water:180,desc:'Fournit 180 unités d’eau par mois.'},
- school:{name:'École',icon:'🏫',cost:3600,upkeep:110,capacity:0,rent:0,kind:'service',jobs:8,desc:'Améliore l’éducation et le bonheur.'},
- clinic:{name:'Clinique',icon:'🏥',cost:4800,upkeep:155,capacity:0,rent:0,kind:'service',jobs:10,desc:'Améliore la santé et le bonheur.'},
- police:{name:'Poste de police',icon:'🚓',cost:4300,upkeep:145,capacity:0,rent:0,kind:'service',jobs:9,desc:'Améliore la sécurité.'},
- fire:{name:'Caserne',icon:'🚒',cost:3900,upkeep:130,capacity:0,rent:0,kind:'service',jobs:8,desc:'Protège les quartiers contre les incendies.'}
+<div class="map-controls">
+  <button class="circle" id="zoomIn" title="Zoom avant">＋</button>
+  <button class="circle" id="zoomOut" title="Zoom arrière">−</button>
+  <button class="circle" id="rotate" title="Tourner la carte (R)">⟳</button>
+  <button class="circle" id="recenter" title="Recentrer">⌖</button>
+</div>
+<div class="top-actions">
+  <button id="viewToggle" class="pill" title="Changer la vue (2/3)">🧊 Vue 3D</button>
+  <button id="speedBtn" class="pill">⏩ ×1</button>
+  <button id="pauseBtn" class="pill">⏸</button>
+  <button id="worldsBtn" class="pill">🌍 Mondes</button>
+</div>
+<div id="selectionInfo" class="selection-info" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div class="bottom-area" id="bottomArea">
+  <div class="tool-options"><button class="mode active" id="modeSingle">👆 Une case</button><button class="mode" id="modeArea">▦ Zone</button><button class="mode" id="modeLine">╱ Ligne</button><span id="chosenTool" class="chosen">🏠 Maison</span></div>
+  <div class="build-items" id="buildItems" aria-label="Constructions"></div>
+  <nav class="categories" id="categories" aria-label="Catégories de construction">
+    <button data-cat="housing" class="category active">🏠 Habitations</button>
+    <button data-cat="economy" class="category">🏪 Économie</button>
+    <button data-cat="roads" class="category">🛣️ Routes</button>
+    <button data-cat="services" class="category">🌳 Services</button>
+    <button data-cat="electricity" class="category">⚡ Énergie</button>
+    <button data-cat="water" class="category">💧 Eau</button>
+    <button data-cat="zoning" class="category">▦ Zones</button>
+    <button data-cat="management" class="category">💶 Gestion</button>
+  </nav>
+</div>
+<div class="help-line" id="helpLine">Clic/toucher : construire · Glisser : déplacer · Molette/pincement : zoomer · 2/3 : changer de vue</div>
+<section id="overlay" class="overlay open" aria-modal="true" role="dialog">
+  <div id="modal" class="modal"><div id="modalBody"></div></div>
+</section>
+<script>
+/* Nexus City v2.0 — zero external dependencies. The same 3D scene is projected
+ * from 3-dimensional world coordinates onto Canvas; the 2D view is orthogonal. */
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const canvas = $('world'), ctx = canvas.getContext('2d', {alpha:false});
+const GRID = 34, STORE = 'nexus-city-worlds-v2', MAX_WORLDS = 3;
+const fmt = n => Math.round(n).toLocaleString('fr-FR');
+const euros = n => fmt(n) + ' €';
+const clamp = (n,a,b) => Math.max(a,Math.min(b,n));
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const TYPES = {
+ house:      {name:'Maison',icon:'🏠',category:'housing',cost:360000,upkeep:900,people:4,rent:720,color:'#e6bc7b',height:1.5},
+ apartment:  {name:'Immeuble',icon:'🏢',category:'housing',cost:1900000,upkeep:5400,people:28,rent:640,color:'#9cb7ce',height:3.4},
+ tower:      {name:'Tour',icon:'🏙️',category:'housing',cost:8500000,upkeep:24000,people:115,rent:760,color:'#85a4c3',height:6.8},
+ luxury:     {name:'Résidence de luxe',icon:'🏰',category:'housing',cost:4200000,upkeep:11500,people:20,rent:1750,color:'#e4ccb5',height:2.7},
+ shop:       {name:'Commerces',icon:'🏪',category:'economy',cost:1050000,upkeep:8000,jobs:22,business:105000,color:'#e7a17d',height:1.8},
+ office:     {name:'Bureaux',icon:'🏬',category:'economy',cost:2900000,upkeep:13000,jobs:75,business:235000,color:'#69a7b1',height:3.7},
+ factory:    {name:'Usine',icon:'🏭',category:'economy',cost:5200000,upkeep:28000,jobs:85,business:390000,color:'#a19a90',height:2.3},
+ road:       {name:'Route',icon:'🛣️',category:'roads',cost:75000,upkeep:400,roadCap:8,color:'#4b5663',height:0.08},
+ avenue:     {name:'Avenue',icon:'🚙',category:'roads',cost:180000,upkeep:950,roadCap:18,color:'#48525f',height:0.08},
+ roundabout: {name:'Rond-point',icon:'🔄',category:'roads',cost:240000,upkeep:1100,roadCap:32,color:'#48525f',height:0.08},
+ park:       {name:'Parc',icon:'🌳',category:'services',cost:180000,upkeep:2100,service:1,color:'#66af6c',height:0.2},
+ school:     {name:'École',icon:'🏫',category:'services',cost:7700000,upkeep:45000,jobs:32,service:4,color:'#e9c86e',height:1.65},
+ clinic:     {name:'Hôpital',icon:'🏥',category:'services',cost:15800000,upkeep:110000,jobs:85,service:6,color:'#e7efec',height:2.6},
+ police:     {name:'Police',icon:'🚓',category:'services',cost:3800000,upkeep:29000,jobs:24,service:2,color:'#82a1cd',height:1.6},
+ fire:       {name:'Pompiers',icon:'🚒',category:'services',cost:4300000,upkeep:31000,jobs:25,service:3,color:'#cb6b5d',height:1.55},
+ solar:      {name:'Parc solaire',icon:'☀️',category:'electricity',cost:2400000,upkeep:9500,power:650,color:'#37769a',height:0.45},
+ wind:       {name:'Éolienne',icon:'🌬️',category:'electricity',cost:3900000,upkeep:19000,power:1450,color:'#e1e9f2',height:4.9},
+ power:      {name:'Centrale thermique',icon:'⚡',category:'electricity',cost:23000000,upkeep:270000,power:8500,color:'#88919c',height:2.6},
+ dam:        {name:'Barrage hydroélectrique',icon:'🌊',category:'electricity',cost:45000000,upkeep:135000,power:10500,color:'#cad5d8',height:2.2,riverOnly:true},
+ waterPlant: {name:'Station de traitement',icon:'🚰',category:'water',cost:13000000,upkeep:78000,water:7800,color:'#6eabd2',height:2.0},
+ waterTower: {name:'Château d’eau',icon:'💧',category:'water',cost:2300000,upkeep:14500,water:1800,color:'#78b0cb',height:3.6},
+ zoneRes:    {name:'Zone résidentielle',icon:'🏡',category:'zoning',zone:'house',cost:360000},
+ zoneMix:    {name:'Quartier mixte',icon:'🏘️',category:'zoning',zone:'mixed',cost:360000},
+ zoneCom:    {name:'Zone commerciale',icon:'🛍️',category:'zoning',zone:'shop',cost:1050000},
+ zoneInd:    {name:'Zone industrielle',icon:'🏗️',category:'zoning',zone:'factory',cost:5200000},
+ bulldoze:   {name:'Démolir',icon:'🚧',category:'management',cost:0},
+ inspect:    {name:'Inspecter',icon:'🔎',category:'management',cost:0}
 };
-const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.82});
-function cube(g,w,h,d,x,y,z,c){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;g.add(m);return m}
-function tree(g,x,z,s=1){let a=new THREE.Mesh(new THREE.CylinderGeometry(.1*s,.15*s,.65*s,7),mat(0x765034));a.position.set(x,.32*s,z);g.add(a);let b=new THREE.Mesh(new THREE.SphereGeometry(.48*s,9,7),mat(0x27864a));b.position.set(x,.83*s,z);b.castShadow=true;g.add(b)}
-function buildMesh(type,x,z){
- const g=new THREE.Group();g.position.set(x,0,z);const def=defs[type];
- if(type==='road'){cube(g,1,.08,1,0,.04,0,0x414954);cube(g,.07,.012,.28,0,.09,0,0xf4d35e)}
- else if(type==='park'){cube(g,1,.1,1,0,.05,0,0x63b96b);tree(g,-.22,.12,.8);tree(g,.25,-.2,.9);tree(g,-.18,-.34,.55)}
- else if(type==='power'){cube(g,.9,1.2,.85,0,.6,0,0x77818e);cube(g,.25,.8,.25,-.18,1.55,0,0xb8c5d1);cube(g,.25,.8,.25,.2,1.55,0,0xb8c5d1);cube(g,.45,.18,.45,0,2.05,0,0x596675)}
- else if(type==='water'){cube(g,.8,.8,.8,0,.4,0,0x7ca9c7);let t=new THREE.Mesh(new THREE.CylinderGeometry(.32,.32,.8,12),mat(0x3b91c9));t.position.set(0,1.15,0);g.add(t);cube(g,.12,.6,.12,0,1.85,0,0x8da8b9)}
- else if(type==='factory'){cube(g,.9,1,.85,0,.5,0,0x9b8872);cube(g,.25,1.1,.25,.23,1.45,-.15,0x665c59);cube(g,.25,.7,.25,-.25,1.25,.15,0x746963)}
- else if(type==='clinic'||type==='school'||type==='police'||type==='fire'||type==='shop'){
-  const c=type==='clinic'?0xf1f1e8:type==='school'?0xe9d76b:type==='police'?0x658bb8:type==='fire'?0xd65c4c:0xe98d65;
-  cube(g,.88,1.15,.82,0,.575,0,c);cube(g,.94,.16,.9,0,1.23,0,type==='clinic'?0x4b9b86:type==='school'?0x9d3d39:type==='police'?0x31527c:type==='fire'?0x9d302d:0x347fba);
-  if(type==='clinic'){cube(g,.16,.55,.07,0,.75,.44,0xd74c4c);cube(g,.5,.14,.07,0,.75,.44,0xd74c4c)}
-  else {cube(g,.22,.22,.035,0,.8,.43,0x9de2f5)}
- }else{
-  let h=type==='house'?1.25:type==='apartment'?2.4:type==='tower'?4.1:2.2,w=type==='tower'?.78:.82;
-  cube(g,w,h,w,0,h/2,0,type==='house'?0xf2c078:type==='apartment'?0x9eb8d2:type==='tower'?0x7898bb:0xe8d4b7);
-  if(type==='house'){let roof=new THREE.Mesh(new THREE.ConeGeometry(.68,.7,4),mat(0xb84e3c));roof.position.set(0,h+.3,0);roof.rotation.y=Math.PI/4;roof.castShadow=true;g.add(roof)}
-  else {for(let yy=.4;yy<h-.1;yy+=.48)for(let xx=-.22;xx<=.23;xx+=.44)cube(g,.17,.2,.025,xx,yy,.42,0x9de2f5);cube(g,.24,.55,.035,0,.28,.42,0x68452f)}
-  if(type==='luxury'){cube(g,.9,.18,.9,0,h+.09,0,0xc7a86a);tree(g,.58,-.25,.65)}
+const CATEGORIES = {housing:'Habitations',economy:'Économie',roads:'Routes',services:'Services',electricity:'Énergie',water:'Eau',zoning:'Zones',management:'Gestion'};
+const TAX_DEFAULT = {residential:6,commercial:7,industrial:8};
+const formatDate = month => new Intl.DateTimeFormat('fr-FR',{month:'long',year:'numeric'}).format(new Date(2026,month-1,1));
+let worlds=[], active=null, tiles=new Map(), currentCategory='housing', selected='house', mode='single';
+let view='3d', yaw=Math.PI/4, zoom=1, panX=0, panY=0, screenW=innerWidth, screenH=innerHeight;
+let areaPreview=null, pointerStart=null, gesture=null, pinchDistance=0, pointerPoints=new Map();
+let cars=[], drawCache=[], toastTimeout=0, paused=false, speed=1, framePrev=0, simAccum=0, saveAccum=0, lastDraw=0;
+const key=(x,z)=>x+','+z, at=(x,z)=>tiles.get(key(x,z));
+const isRoad=t=>t==='road'||t==='avenue'||t==='roundabout';
+const rand2=(x,z,seed=0)=>{let n=Math.sin(x*127.1+z*311.7+seed*.017)*43758.5453123;return n-Math.floor(n)};
+const riverCenter=z=>Math.round(26+Math.sin(z*.27+(active?.seed||1)*.00031)*2.6 +Math.sin(z*.73)*.75);
+function terrain(x,z){
+ if(x<0||z<0||x>=GRID||z>=GRID)return 'out';
+ const center=riverCenter(z),dist=Math.abs(x-center);
+ if(dist<=1)return 'river';
+ if(dist<=2)return 'shore';
+ const r=rand2(x,z,active?.seed||0);
+ if(r>.83&&x<22&&!(x>11&&x<22&&z>12&&z<22))return 'forest';
+ if(r<.09)return 'flower';
+ return 'grass';
+}
+function newWorld(name,startingMoney,needPower,needWater,unlimited){
+ const id=String(Date.now())+'-'+Math.floor(Math.random()*1e8);
+ const w={id,name:name.trim().slice(0,36)||'Nouvelle ville',seed:Math.floor(Math.random()*999999),options:{startingMoney,needPower,needWater,unlimited},money:startingMoney,pop:0,month:1,tax:{...TAX_DEFAULT},exportPower:false,loans:[],tiles:[],lastReport:{income:0,expense:0,profit:0,exportIncome:0,taxes:0,rent:0,business:0,maintenance:0,loanPayments:0},createdAt:Date.now(),updatedAt:Date.now()};
+ for(let x=15;x<=19;x++)w.tiles.push({x,z:18,type:'road'});
+ w.tiles.push({x:17,z:17,type:'townhall'});return w;
+}
+function readWorlds(){
+ try{
+  const saved=localStorage.getItem(STORE);
+  if(saved){const v=JSON.parse(saved);return Array.isArray(v)?v.slice(0,MAX_WORLDS).filter(w=>w&&typeof w.id==='string'):[]}
+  // Import the save format used by the original single-file GitHub version.
+  const legacy=localStorage.getItem('ma-ville-3d-v3');
+  if(legacy){const old=JSON.parse(legacy),funds=Math.max(0,Math.round((old.money??35000)*1000));
+   const w=newWorld('Ma ville (ancienne sauvegarde)',funds,true,true,false);
+   w.money=funds;w.pop=old.pop||0;w.month=old.month||1;
+   for(const k of Object.keys(TAX_DEFAULT))if(Number.isFinite(old.taxRates?.[k]))w.tax[k]=old.taxRates[k];
+   const oldTypes={water:'waterPlant'};
+   if(Array.isArray(old.tiles)&&old.tiles.length)w.tiles=[];
+   for(const t of old.tiles||[]){const parts=String(t.k).split(',').map(Number),type=oldTypes[t.type]||t.type;
+    const x=parts[0]+17,z=parts[1]+17;
+    if(TYPES[type]&&Number.isInteger(x)&&Number.isInteger(z)&&x>=0&&z>=0&&x<GRID&&z<GRID)w.tiles.push({x,z,type});
+   }
+   return [w];
+  }
+ }catch(e){console.warn('La sauvegarde ne peut pas être lue :',e)}
+ return [];
+}
+function writeWorlds(){try{localStorage.setItem(STORE,JSON.stringify(worlds));return true}catch{toast('Stockage indisponible : la sauvegarde automatique ne fonctionne pas.');return false}}
+function persist(show=false){if(!active)return;active.tiles=[...tiles.values()].map(({x,z,type})=>({x,z,type}));active.updatedAt=Date.now();writeWorlds();if(show)toast('Ville sauvegardée automatiquement sur cet appareil ✓')}
+function activate(w){active=w;active.options={startingMoney:70000000,needPower:true,needWater:true,unlimited:false,...(w.options||{})};active.money=Number.isFinite(w.money)?w.money:active.options.startingMoney;active.pop=Math.max(0,Number(w.pop)||0);active.month=Math.max(1,Math.floor(Number(w.month)||1));tiles=new Map();for(const t of w.tiles||[]){if((t.type==='townhall'||TYPES[t.type])&&Number.isInteger(t.x)&&Number.isInteger(t.z))tiles.set(key(t.x,t.z),{type:t.type,x:t.x,z:t.z})}
+ active.tax={...TAX_DEFAULT,...(active.tax||{})};active.loans=active.loans||[];active.lastReport=active.lastReport||{income:0,expense:0,profit:0};
+ view='3d';yaw=Math.PI/4;zoom=1;panX=0;panY=0;paused=false;speed=1;simAccum=0;saveAccum=0;cars=[];selected='house';currentCategory='housing';mode='single';setOpen(false);refreshControls();refreshUI();persist();toast('Bienvenue à '+w.name+' !')}
+function allStats(){
+ let housing=0,jobs=0,power=0,water=0,upkeep=0,roadCapacity=0,services=0,shops=0,industries=0,offices=0,resCount=0,connectedHousing=0,buildings=0;
+ for(const t of tiles.values()){
+  const d=TYPES[t.type];if(!d)continue;buildings++;
+  housing+=d.people||0;jobs+=d.jobs||0;power+=d.power||0;water+=d.water||0;upkeep+=d.upkeep||0;roadCapacity+=d.roadCap||0;services+=d.service||0;
+  if(d.people){resCount++;if(adjacentRoad(t.x,t.z))connectedHousing+=d.people}
+  if(t.type==='shop')shops++;if(t.type==='factory')industries++;if(t.type==='office')offices++;
  }
- scene.add(g);return g;
+ const pop=active?.pop||0;
+ const powerNeed=pop*2+shops*80+industries*900+offices*160+Math.max(0,buildings-resCount)*10;
+ const waterNeed=pop*3+shops*50+industries*450+offices*100+services*30;
+ const pRatio=active?.options.needPower===false?1:powerNeed?clamp(power/powerNeed,0,1):1;
+ const wRatio=active?.options.needWater===false?1:waterNeed?clamp(water/waterNeed,0,1):1;
+ const roadRatio=housing?connectedHousing/housing:1;
+ const jobRatio=pop?clamp(jobs/Math.max(1,pop*.48),0,1):1;
+ const serviceScore=pop?clamp(services/Math.max(1,pop/50),0,1):0.5;
+ const congestion=roadCapacity?clamp((Math.min(pop,jobs*2)*.9 + Math.max(0,industries*45))/roadCapacity,0,3):0;
+ const trafficPenalty=congestion>1?Math.min(16,(congestion-1)*12):0;
+ const happiness=clamp(Math.round(22+20*pRatio+17*wRatio+12*roadRatio+13*jobRatio+12*serviceScore-trafficPenalty-industries*1.5-Math.max(0,active?.tax.residential-12)*2),5,100);
+ return {housing,jobs,power,water,upkeep,roadCapacity,services,shops,industries,offices,connectedHousing,powerNeed,waterNeed,pRatio,wRatio,roadRatio,jobRatio,serviceScore,congestion,happiness,buildings};
 }
-function key(x,z){return `${x},${z}`}
-function count(type){return [...tiles.values()].filter(v=>v.type===type).length}
-function totals(){let housing=0,jobs=0,power=0,water=0,upkeep=0;for(const {type} of tiles.values()){let d=defs[type];housing+=d.capacity||0;jobs+=d.jobs||0;power+=d.power||0;water+=d.water||0;upkeep+=d.upkeep||0}return {housing,jobs,power,water,upkeep}}
-function utilityDemand(){let t=totals(),occupied=Math.min(pop,t.housing);return {pneed:Math.ceil(occupied*.75),wneed:Math.ceil(occupied*.9),...t}}
-function roadAccess(x,z){return [[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>tiles.get(key(x+a,z+b))?.type==='road')}
-function toast(s){let e=document.querySelector('#toast');e.textContent=s;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),1900)}
-function add(type,x,z,loading=false){let k=key(x,z),d=defs[type];if(tiles.has(k))return false;if(!loading&&money<d.cost){toast("Fonds insuffisants !");return false}if(!loading)money-=d.cost;let obj=buildMesh(type,x,z);tiles.set(k,{type,obj,x,z});if(d.kind==='res'){}updateUI();return true}
-function removeAt(x,z){let k=key(x,z),v=tiles.get(k);if(!v)return;let d=defs[v.type];if(d.kind==='res')pop=Math.max(0,pop-Math.min(d.capacity,Math.floor(d.capacity*.7)));scene.remove(v.obj);tiles.delete(k);money+=Math.floor(d.cost*.35);updateUI();toast('Bâtiment démoli : remboursement 35 %')}
-function calcStats(){let t=totals(),res=[...tiles.values()].filter(v=>defs[v.type].kind==='res'),capacity=t.housing;let access=res.filter(v=>roadAccess(v.x,v.z)).reduce((a,v)=>a+defs[v.type].capacity,0);let demand=Math.max(0,Math.min(100,Math.round((capacity-pop+Math.max(0,t.jobs-pop*.45)*.12)*1.5)));let u=utilityDemand();let pRatio=u.pneed?Math.min(1,u.power/u.pneed):1,wRatio=u.wneed?Math.min(1,u.water/u.wneed):1;let roadRatio=capacity?access/capacity:1;let services=Math.min(1,(count('school')+count('clinic')+count('police')+count('fire')+count('park'))/Math.max(1,Math.ceil(pop/65)));let jobRatio=pop?Math.min(1,t.jobs/(pop*.45)):1;let avgTax=(taxRates.residential+taxRates.commercial+taxRates.industrial+taxRates.electricity+taxRates.water+taxRates.services)/6;
-let taxPenalty=Math.max(0,avgTax-8)*1.25;
-let happiness=Math.max(5,Math.min(100,Math.round(28+25*pRatio+20*wRatio+12*roadRatio+10*services+8*jobRatio-(count('factory')*3)-taxPenalty)));return {t,u,demand,pRatio,wRatio,roadRatio,services,jobRatio,happiness,access}}
-function monthEnd(){
- let s=calcStats(),res=[...tiles.values()].filter(v=>defs[v.type].kind==='res'),capacity=s.t.housing;
- let accessibleCapacity=res.filter(v=>roadAccess(v.x,v.z)).reduce((a,v)=>a+defs[v.type].capacity,0);
- let utilityFactor=Math.min(s.pRatio,s.wRatio),roadFactor=capacity?accessibleCapacity/capacity:1;
- let jobFactor=pop?Math.min(1,s.t.jobs/(pop*.45)):1;
- let taxAvg=(taxRates.residential+taxRates.commercial+taxRates.industrial+taxRates.electricity+taxRates.water+taxRates.services)/6;
- let attractiveness=Math.max(0,Math.min(1,(s.happiness/100)*.55+utilityFactor*.2+roadFactor*.15+jobFactor*.1));
- let desired=Math.floor(Math.min(capacity,accessibleCapacity+(capacity-accessibleCapacity)*.2)*attractiveness);
- let maxArrivals=Math.max(1,Math.ceil(Math.max(10,capacity)*.12));
- let arrivals=Math.min(Math.max(0,desired-pop),maxArrivals);
- let departureRate=(s.happiness<35?.22:s.happiness<50?.12:s.happiness<65?.05:0)+
-   (utilityFactor<.5?.12:utilityFactor<.95?.05:0)+(taxAvg>18?.12:taxAvg>13?.05:0)+(jobFactor<.45?.08:0);
- let departures=Math.min(pop,Math.ceil(pop*Math.min(.65,departureRate)));
- pop=Math.max(0,Math.min(capacity,pop+arrivals-departures));
- let avgRent=res.length?res.reduce((a,v)=>a+defs[v.type].rent*defs[v.type].capacity,0)/Math.max(1,res.reduce((a,v)=>a+defs[v.type].capacity,0)):0;
- let rent=Math.floor(pop*avgRent);
- let resTax=Math.floor(pop*18*taxRates.residential/10);
- let commercialJobs=count('shop')*defs.shop.jobs,industrialJobs=count('factory')*defs.factory.jobs;
- let commercialTax=Math.floor(commercialJobs*14*taxRates.commercial/10);
- let industrialTax=Math.floor(industrialJobs*12*taxRates.industrial/10);
- let powerTax=Math.floor(s.u.pneed*1.8*taxRates.electricity/10);
- let waterTax=Math.floor(s.u.wneed*1.2*taxRates.water/10);
- let serviceCount=count('school')+count('clinic')+count('police')+count('fire');
- let serviceTax=Math.floor(serviceCount*90*taxRates.services/10);
- let taxes=resTax+commercialTax+industrialTax+powerTax+waterTax+serviceTax;
- let utilityCost=s.u.pneed*1.8+s.u.wneed*1.2;
- let expense=s.t.upkeep+utilityCost;
- let income=rent+taxes+Math.floor(s.t.jobs*3);
- let balance=income-expense;money+=balance;monthIncome=income;monthExpense=expense;month++;happiness=calcStats().happiness;
- if(arrivals>0){citizenMessage=`${arrivals} nouveaux habitants arrivent : ils apprécient les logements disponibles et les services.`}
- else if(departures>0){citizenMessage=`${departures} habitants quittent la ville. Ils se plaignent de ${s.happiness<45?'la qualité de vie':utilityFactor<.95?'manques d’eau ou d’électricité':taxAvg>13?'taxes trop élevées':'manque d’emplois'}.`}
- else if(pop>=capacity){citizenMessage='Les habitants demandent de nouveaux logements : la capacité est presque atteinte.'}
- else {citizenMessage=residentWish(s,capacity,accessibleCapacity,jobFactor,utilityFactor,taxAvg)}
- if(money<0)toast('Attention : la ville est endettée ! Réduis les dépenses.');
- else toast(`Mois ${month-1} terminé : ${arrivals} arrivées, ${departures} départs, ${balance>=0?'+':''}${balance.toLocaleString('fr-FR')} €`);
- updateUI();if(month%3===0)showNotice();
+function adjacentRoad(x,z){return [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>isRoad(at(x+dx,z+dz)?.type))}
+function noMoney(cost){return !active.options.unlimited && active.money<cost}
+function canPlace(type,x,z){
+ if(x<0||z<0||x>=GRID||z>=GRID)return false;
+ if(type==='inspect')return true;
+ if(type==='bulldoze')return !!at(x,z)&&at(x,z).type!=='townhall';
+ if(at(x,z))return false;
+ const d=TYPES[type];if(!d)return false;
+ const land=terrain(x,z);return d.riverOnly?land==='river':isRoad(type)||land!=='river';
 }
-function residentWish(s,capacity,accessibleCapacity,jobFactor,utilityFactor,taxAvg){
- if(s.pRatio<.95)return 'Habitants : « Nous avons besoin de plus d’électricité ! »';
- if(s.wRatio<.95)return 'Habitants : « Il nous faut davantage d’eau potable. »';
- if(capacity-pop<8)return 'Habitants : « Construisez de nouveaux logements, s’il vous plaît ! »';
- if(jobFactor<.7)return 'Habitants : « Nous aimerions trouver davantage de travail en ville. »';
- if(s.roadRatio<.8)return 'Habitants : « Certaines rues ne sont pas bien reliées aux quartiers. »';
- if(taxAvg>13)return 'Habitants : « Les taxes deviennent trop lourdes pour nous. »';
- if(count('school')===0)return 'Familles : « Pourriez-vous construire une école ? »';
- if(count('park')===0)return 'Habitants : « Un parc ou un espace vert serait agréable. »';
- return 'Habitants : « La ville est agréable ! Continuons à améliorer les quartiers. »';
+function resolveZone(type,i){if(type==='zoneRes')return i%9===0?'apartment':'house';if(type==='zoneMix')return i%7===0?'shop':i%5===0?'apartment':'house';return TYPES[type]?.zone||type}
+function placementCost(type,x,z){return TYPES[type].cost+(isRoad(type)&&terrain(x,z)==='river'?220000:0)}
+function planBuild(type,cells){let plan=[],cost=0,used=new Set();for(let i=0;i<cells.length;i++){
+ const c=cells[i],k=key(c.x,c.z),t=resolveZone(type,i);
+ if(used.has(k)||!canPlace(t,c.x,c.z))continue;used.add(k);plan.push({...c,type:t});cost+=placementCost(t,c.x,c.z);
+ }return {plan,cost};}
+function build(type,cells){if(!active)return;
+ if(type==='inspect'){const c=cells[0],t=c&&at(c.x,c.z);if(t)inspectTile(t);else toast('Terrain libre — sélectionne une construction.');return}
+ if(type==='bulldoze'){
+  let refund=0,n=0;for(const c of cells){const t=at(c.x,c.z);if(t&&t.type!=='townhall'){refund+=Math.round(TYPES[t.type].cost*.25);tiles.delete(key(c.x,c.z));n++}}
+  if(n){active.money+=refund;active.pop=Math.min(active.pop,allStats().housing);persist();refreshUI();toast(n+' construction(s) supprimée(s) • remboursement '+euros(refund))}else toast('Aucune construction à démolir.');return;
+ }
+ const {plan,cost}=planBuild(type,cells);
+ if(!plan.length){toast(type==='dam'?'Le barrage doit être construit sur la rivière.':'Les cases sont occupées ou non constructibles.');return}
+ if(noMoney(cost)){toast('Budget insuffisant : '+euros(cost)+' nécessaires.');return}
+ for(const c of plan)tiles.set(key(c.x,c.z),c);
+ if(!active.options.unlimited)active.money-=cost;
+ persist();refreshUI();toast(plan.length+' construction(s) • '+euros(cost));
 }
-function showNotice(){let s=calcStats(),txt=s.demand>55?'Les habitants réclament davantage de logements.':s.pRatio<1?'La ville manque d’électricité.':s.wRatio<1?'La ville manque d’eau.':s.jobRatio<.65?'Il manque des emplois.':'La ville se développe correctement.';document.querySelector('#status').textContent=txt;document.querySelector('#citizenVoice').textContent=citizenMessage}
-function updateUI(){let s=calcStats();document.querySelector('#money').textContent=money.toLocaleString('fr-FR')+' €';document.querySelector('#people').textContent=pop.toLocaleString('fr-FR');document.querySelector('#homes').textContent=s.t.housing.toLocaleString('fr-FR')+' places';document.querySelector('#date').textContent='Mois '+month;document.querySelector('#balance').textContent=(monthIncome-monthExpense>=0?'+':'')+(monthIncome-monthExpense).toLocaleString('fr-FR')+' €/mois';document.querySelector('#power').textContent=`${s.u.power} / ${s.u.pneed}`;document.querySelector('#water').textContent=`💧 ${s.u.water} / ${s.u.wneed} eau`;document.querySelector('#happiness').textContent=s.happiness+'%';document.querySelector('#happybar').style.width=s.happiness+'%';document.querySelector('#demand').textContent=s.demand>60?'Très élevée':s.demand>30?'Moyenne':'Faible';document.querySelector('#demandbar').style.width=s.demand+'%';document.querySelector('#jobs').textContent=`${s.t.jobs} / ${Math.ceil(pop*.45)}`;document.querySelector('#tools').innerHTML=Object.entries(defs).map(([k,d])=>`<button class="tool ${selected===k?'active':''}" data-type="${k}"><span class="ico">${d.icon}</span><span>${d.name}<small>${d.cost.toLocaleString('fr-FR')} € • entretien ${d.upkeep} €/mois</small></span></button>`).join('');document.querySelectorAll('.tool').forEach(b=>b.onclick=()=>{selected=b.dataset.type;updateUI()})}
-renderer.domElement.addEventListener('pointerdown',e=>{if(e.target!==renderer.domElement)return;pointer.x=e.clientX/innerWidth*2-1;pointer.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(pointer,camera);let hit=ray.intersectObject(ground)[0];if(!hit)return;let x=Math.round(hit.point.x),z=Math.round(hit.point.z);if(Math.abs(x)>11||Math.abs(z)>11)return;if(selected==='demolish')removeAt(x,z);else if(add(selected,x,z)){toast(defs[selected].name+' construit !')}});
-function openModal(title,body){document.querySelector('#dialogContent').innerHTML=`<h2>${title}</h2>${body}`;document.querySelector('#modal').classList.add('open')}
-document.querySelector('#close').onclick=()=>document.querySelector('#modal').classList.remove('open');
-document.querySelector('#economy').onclick=()=>{let s=calcStats(),res=[...tiles.values()].filter(v=>defs[v.type].kind==='res'),r=0;res.forEach(v=>{let d=defs[v.type];r+=d.capacity*d.rent});openModal('💶 Budget mensuel',`<div class="cards"><div class="info">Loyers théoriques<br><b>${Math.round(r).toLocaleString('fr-FR')} €</b></div><div class="info">Taxes habitants<br><b>${(pop*18).toLocaleString('fr-FR')} €</b></div><div class="info">Entretien bâtiments<br><b>${s.t.upkeep.toLocaleString('fr-FR')} €</b></div><div class="info">Eau + électricité<br><b>${Math.round(s.u.pneed*1.8+s.u.wneed*1.2).toLocaleString('fr-FR')} €</b></div></div><p>Les loyers réellement encaissés dépendent du nombre de logements occupés. Les revenus et dépenses sont calculés à chaque fin de mois de jeu.</p><p>Dernier bilan : <b>${monthIncome.toLocaleString('fr-FR')} €</b> de recettes et <b>${monthExpense.toLocaleString('fr-FR')} €</b> de dépenses.</p>`)}
-document.querySelector('#taxes').onclick=()=>{
- const labels={residential:'Habitations',commercial:'Commerces',industrial:'Industries',electricity:'Électricité',water:'Eau',services:'Services publics'};
- let controls=Object.entries(labels).map(([k,label])=>`<div class="row"><label for="tax-${k}">${label}</label><b id="taxval-${k}">${taxRates[k]}%</b></div><input id="tax-${k}" type="range" min="0" max="30" value="${taxRates[k]}" style="width:100%;accent-color:#ffd166;margin:0 0 9px" oninput="document.getElementById('taxval-${k}').textContent=this.value+'%';window.setCityTax('${k}',this.value)">`).join('');
- openModal('⚖️ Régler les taxes',`<p>Choisis un taux pour chaque catégorie. Des taxes plus élevées rapportent davantage, mais peuvent réduire le bonheur et pousser des habitants à partir. Les changements sont appliqués au prochain mois.</p>${controls}<p class="muted">0 % = aucune taxe • 30 % = taxe très élevée</p>`);
-};
-window.setCityTax=(k,v)=>{taxRates[k]=Number(v);updateUI()};
-document.querySelector('#speed').onclick=e=>{
- const speeds=[1,2,4,8],i=speeds.indexOf(speed);speed=speeds[(i+1)%speeds.length];
- e.currentTarget.textContent=`⏩ Vitesse ×${speed}`;document.querySelector('#time').textContent=`Vitesse ×${speed}`;toast(`Vitesse du jeu : ×${speed}`);
-};
-document.querySelector('#services').onclick=()=>{let s=calcStats();openModal('🚰 Services essentiels',`<div class="row"><span>Électricité produite / demandée</span><b>${s.u.power} / ${s.u.pneed}</b></div><div class="bar ${s.pRatio<1?'bad':''}"><i style="width:${s.pRatio*100}%"></i></div><div class="row"><span>Eau produite / demandée</span><b>${s.u.water} / ${s.u.wneed}</b></div><div class="bar ${s.wRatio<1?'bad':''}"><i style="width:${s.wRatio*100}%"></i></div><div class="row"><span>Accès routier aux logements</span><b>${Math.round(s.roadRatio*100)}%</b></div><div class="row"><span>Emplois disponibles</span><b>${s.t.jobs}</b></div><p>Une centrale fournit 180 unités d’électricité. Une station de pompage fournit 180 unités d’eau. Les logements consomment ces ressources selon leur occupation. Construis une route adjacente à chaque logement pour permettre un accès fiable.</p>`)}
-document.querySelector('#roads').onclick=e=>{showRoads=!showRoads;e.currentTarget.classList.toggle('active',showRoads);toast(showRoads?'Conseil : relie les bâtiments aux routes.':'Affichage normal')};
-document.querySelector('#rotate').onclick=()=>{camera.position.set(24,29,31);controls.target.set(0,0,0);controls.update()};
-document.querySelector('#pause').onclick=e=>{paused=!paused;e.currentTarget.textContent=paused?'▶ Reprendre':'⏸ Pause'};
-function save(){let data={money,pop,month,taxRates,tiles:[...tiles.entries()].map(([k,v])=>({k,type:v.type}))};localStorage.setItem('ma-ville-3d-v3',JSON.stringify(data));toast('Ville sauvegardée sur cet appareil !')}
-document.querySelector('#save').onclick=save;
-let old=localStorage.getItem('ma-ville-3d-v3');if(old){try{let d=JSON.parse(old);money=d.money??35000;pop=d.pop??0;month=d.month??1;if(d.taxRates)Object.assign(taxRates,d.taxRates);for(let t of d.tiles||[]){let [x,z]=t.k.split(',').map(Number);add(t.type,x,z,true)}updateUI();toast('Sauvegarde chargée')}catch(e){}}
-function vehicle(){let g=new THREE.Group();let body=cube(g,.28,.16,.48,0,.18,0,Math.random()>.5?0xd94c4c:0x3b72bb);for(let x of [-.13,.13])for(let z of [-.15,.15]){let w=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.035,8),mat(0x20242b));w.rotation.z=Math.PI/2;w.position.set(x,.08,z);g.add(w)}scene.add(g);return g}
-function spawnCars(){for(let i=0;i<6;i++){let v=vehicle();v.position.set(-11+i*4,.02,0);vehicles.push({obj:v,t:i/6})}}
-spawnCars();
-function pedestrians(){for(let i=0;i<10;i++){let g=new THREE.Group();let torso=new THREE.Mesh(new THREE.CapsuleGeometry(.07,.22,3,6),mat([0x315f9b,0xc45d43,0x6d8c55,0x785a9e][i%4]));torso.position.y=.25;g.add(torso);scene.add(g);walkers.push({obj:g,t:i/10})}}pedestrians();
-let last=performance.now();function animate(now){requestAnimationFrame(animate);let dt=Math.min(.05,(now-last)/1000);last=now;controls.update();if(!paused){monthClock+=dt*speed;if(monthClock>=24){monthClock=0;monthEnd()}vehicles.forEach((v,i)=>{v.t=(v.t+dt*.035)%1;let x=-11+v.t*22;v.obj.position.set(x,.02,(i%2)*2-1);v.obj.rotation.y=0});walkers.forEach((w,i)=>{w.t=(w.t+dt*.018)%1;let a=w.t*Math.PI*2;w.obj.position.set(Math.cos(a)*(4+i%3),0,Math.sin(a)*(4+i%3));w.obj.rotation.y=-a})}renderer.render(scene,camera)}
-requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});updateUI();
-</script></body></html>
+function monthEnd(){if(!active)return;
+ let s=allStats(),accessible=s.connectedHousing;
+ const utilities=Math.min(s.pRatio,s.wRatio), attractiveness=clamp((s.happiness-25)/75,0,1);
+ const target=Math.floor(accessible*(.42+.56*attractiveness)*utilities);
+ const arrivalCap=Math.max(3,Math.ceil(s.housing*.07));
+ const delta=target>active.pop?Math.min(target-active.pop,arrivalCap):-Math.min(active.pop-target,Math.max(2,Math.ceil(active.pop*.09)));
+ active.pop=clamp(active.pop+delta,0,s.housing);s=allStats();
+ const rent=Math.round(active.pop*705);
+ const residentialTaxes=Math.round(active.pop*3200*active.tax.residential/100);
+ const businessTaxes=Math.round((s.shops*105000+s.offices*235000)*active.tax.commercial/100+s.industries*390000*active.tax.industrial/100);
+ const energySurplus=Math.max(0,s.power-s.powerNeed);
+ const exportIncome=active.exportPower?Math.round(energySurplus*83):0;
+ const taxes=residentialTaxes+businessTaxes;
+ const income=rent+taxes+exportIncome;
+ const maintenance=s.upkeep;
+ let loanPayments=0;
+ for(const loan of active.loans){if(loan.monthsLeft<=0)continue;const interest=loan.remaining*loan.rate/12;const payment=Math.min(loan.remaining+interest,loan.payment);loan.remaining=Math.max(0,loan.remaining+interest-payment);loan.monthsLeft--;loanPayments+=payment}
+ active.loans=active.loans.filter(l=>l.monthsLeft>0&&l.remaining>.01);
+ const expense=Math.round(maintenance+loanPayments);
+ const profit=Math.round(income-expense);
+ if(!active.options.unlimited)active.money+=profit;
+ active.lastReport={income,expense,profit,rent,taxes,business:businessTaxes,exportIncome,maintenance,loanPayments:Math.round(loanPayments),electricitySurplus:energySurplus};
+ active.month++;persist();refreshUI();toast((profit>=0?'+':'')+euros(profit)+' ce mois-ci'+(delta>0?' · '+delta+' nouveaux habitants':''));
+}
+function loanPayment(principal,years){const n=years*12,r=.035/12;return principal*r/(1-Math.pow(1+r,-n))}
+function takeLoan(amount,years){if(active.loans.length>=4){toast('Maximum 4 prêts actifs.');return}
+ const payment=loanPayment(amount,years);
+ active.loans.push({id:Date.now(),principal:amount,remaining:amount,rate:.035,monthsLeft:years*12,payment});
+ active.money+=amount;persist();refreshUI();showLoans();toast('Prêt accordé : '+euros(amount))}
+function toast(message){const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>el.classList.remove('show'),2600)}
+function setOpen(open){$('overlay').classList.toggle('open',open)}
+function modal(title,content){$('modalBody').innerHTML=`<div class="modal-header"><h2>${title}</h2><button class="close" id="closeModal">✕ Fermer</button></div>${content}`;setOpen(true);$('closeModal').onclick=()=>setOpen(false)}
+function showWorldList(){if(active)persist();paused=true;
+ const cards=Array.from({length:MAX_WORLDS},(_,i)=>{
+  const w=worlds[i];return w?`<article class="slot"><span class="chip">MONDE ${i+1}</span><h3>🌆 ${esc(w.name)}</h3><p>${esc(formatDate(w.month))}<br>${fmt(w.pop)} habitants<br>${w.options?.unlimited?'Argent illimité':euros(w.money)}</p><div class="slot-actions"><button class="primary" data-load="${esc(w.id)}">▶ Jouer</button><button class="danger-button" data-delete="${esc(w.id)}">Supprimer</button></div></article>`:
+  `<article class="slot"><span class="chip">MONDE ${i+1}</span><h3>＋ Nouvelle ville</h3><p>Emplacement disponible</p><div class="slot-actions"><button class="primary" data-create="1">Créer un monde</button></div></article>`;
+ }).join('');
+ $('modalBody').innerHTML=`<h1>◆ NEXUS <em>CITY</em></h1><p>Construis une ville, organise ses services, gère les finances et développe la circulation. Jusqu'à <b>3 mondes</b>, sauvegardés indépendamment et automatiquement.</p><div class="slot-grid">${cards}</div><p class="note">💾 Sauvegardes locales dans ce navigateur : elles ne sont pas synchronisées entre appareils. N'efface pas les données du navigateur pour les conserver.</p>`;
+ setOpen(true);
+ $('modalBody').querySelectorAll('[data-create]').forEach(b=>b.onclick=showCreateWorld);
+ $('modalBody').querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>activate(worlds.find(w=>w.id===b.dataset.load)));
+ $('modalBody').querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>{
+  const w=worlds.find(v=>v.id===b.dataset.delete);if(!w)return;
+  if(!confirm('Supprimer définitivement « '+w.name+' » ? Cette action est irréversible.'))return;
+  worlds=worlds.filter(v=>v!==w);if(active===w)active=null;writeWorlds();showWorldList();
+ });
+}
+function showCreateWorld(){if(worlds.length>=MAX_WORLDS){showWorldList();return}
+ $('modalBody').innerHTML=`<div class="modal-header"><h2>🌍 Créer une ville</h2><button id="backToWorlds" class="close">← Retour</button></div>
+ <p>Configure les règles avant de commencer. Elles resteront propres à ce monde.</p>
+ <div class="field"><label for="newName">Nom de la ville</label><input id="newName" maxlength="36" value="Ma nouvelle ville" placeholder="Nom de la ville"></div>
+ <div class="form-grid"><div class="field"><label for="newFunds">Argent de départ</label><select id="newFunds"><option value="20000000">20 millions € — Difficile</option><option value="70000000" selected>70 millions € — Normal</option><option value="200000000">200 millions € — Facile</option><option value="custom">Personnalisé</option></select></div><div class="field" id="customWrap" hidden><label for="customFunds">Budget personnalisé (€)</label><input id="customFunds" inputmode="numeric" type="number" min="0" max="100000000000" value="50000000"></div></div>
+ <div class="checkbox-row"><input type="checkbox" id="newNeedPower" checked><label for="newNeedPower">La ville doit disposer d'électricité</label></div>
+ <div class="checkbox-row"><input type="checkbox" id="newNeedWater" checked><label for="newNeedWater">La ville doit disposer d'eau potable</label></div>
+ <div class="checkbox-row"><input type="checkbox" id="newUnlimited"><label for="newUnlimited">💎 Argent illimité (mode créatif)</label></div>
+ <p class="note">La carte contient des plaines, des zones boisées et une rivière pour construire des barrages. Les coûts sont des estimations de jeu inspirées d'ordres de grandeur réels, pas des devis.</p>
+ <div class="button-row"><button id="createWorldSubmit" class="primary">🚀 Créer et jouer</button></div>`;
+ $('newFunds').onchange=()=>{$('customWrap').hidden=$('newFunds').value!=='custom'};
+ $('backToWorlds').onclick=showWorldList;
+ $('createWorldSubmit').onclick=()=>{
+  const val=$('newFunds').value;const amount=val==='custom'?Number($('customFunds').value):Number(val);
+  if(!Number.isFinite(amount)||amount<0||amount>1e11){toast('Budget invalide (0 à 100 milliards €).');return}
+  const w=newWorld($('newName').value,Math.round(amount),$('newNeedPower').checked,$('newNeedWater').checked,$('newUnlimited').checked);
+  worlds.push(w);writeWorlds();activate(w);persist();
+ };
+}
+function refreshControls(){
+ document.querySelectorAll('.category').forEach(b=>{b.classList.toggle('active',b.dataset.cat===currentCategory)});
+ document.querySelectorAll('.mode').forEach(b=>b.classList.remove('active'));
+ $('modeSingle').classList.toggle('active',mode==='single');$('modeArea').classList.toggle('active',mode==='area');$('modeLine').classList.toggle('active',mode==='line');
+ $('viewToggle').textContent=view==='3d'?'🧊 Vue 3D':'🗺️ Vue 2D';$('speedBtn').textContent='⏩ ×'+speed;$('pauseBtn').textContent=paused?'▶':'⏸';
+ const objects=Object.entries(TYPES).filter(([_,d])=>d.category===currentCategory);
+ const extras=currentCategory==='management'?[
+  ['budget','💶','Budget'],['loans','🏦','Prêts'],['taxes','⚖️','Impôts'],['export','⚡','Export énergie'],['save','💾','Sauvegarder']
+ ]:[];
+ $('buildItems').innerHTML=objects.map(([id,d])=>`<button class="build-item ${selected===id?'active':''}" data-type="${id}" title="${esc(d.name)}"><span class="emoji">${d.icon}</span><span><b>${esc(d.name)}</b><small>${d.cost?euros(d.cost):'Action'}</small></span></button>`).join('')+extras.map(([id,ic,n])=>`<button class="build-item" data-action="${id}"><span class="emoji">${ic}</span><span><b>${n}</b><small>Ouvrir</small></span></button>`).join('');
+ $('buildItems').querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{selected=b.dataset.type;if(TYPES[selected].zone){mode='area'}else if(selected==='road'){mode='line'}refreshControls()});
+ $('buildItems').querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>openAction(b.dataset.action));
+ $('chosenTool').textContent=(TYPES[selected]?.icon||'👆')+' '+(TYPES[selected]?.name||'');
+ $('helpLine').textContent=mode==='area'?'Glisse sur la carte pour remplir automatiquement une zone rectangulaire.':mode==='line'?'Glisse sur la carte pour tracer une ligne de constructions.':'Clic / toucher : construire • Glisser : déplacer la carte • Molette : zoomer • Touches 2 / 3 : vue';
+}
+function bar(id,ratio){const el=$(id);el.style.width=(clamp(ratio,0,1)*100).toFixed(1)+'%';el.className=ratio<.45?'danger':ratio<.8?'warn':''}
+function refreshUI(){if(!active)return;
+ const s=allStats();$('worldTitle').textContent=active.name;
+ $('money').textContent=active.options.unlimited?'∞ Illimité':euros(active.money);
+ $('monthlyBalance').textContent=(active.lastReport.profit>=0?'+':'')+euros(active.lastReport.profit||0)+' / mois';$('monthlyBalance').classList.toggle('negative',active.lastReport.profit<0);
+ $('month').textContent=formatDate(active.month);$('population').textContent=fmt(active.pop);$('happiness').textContent=s.happiness+'%';bar('happinessBar',s.happiness/100);
+ $('power').textContent=active.options.needPower?fmt(s.power)+' / '+fmt(s.powerNeed):'Non requis';bar('powerBar',s.pRatio);
+ $('water').textContent=active.options.needWater?fmt(s.water)+' / '+fmt(s.waterNeed):'Non requis';bar('waterBar',s.wRatio);
+ $('traffic').textContent=s.congestion>1.3?'Embouteillages':s.congestion>.75?'Chargé':'Fluide';bar('trafficBar',1-Math.min(1,s.congestion/2));
+ $('jobs').textContent=fmt(s.jobs)+' / '+fmt(Math.ceil(active.pop*.48));
+ $('cityMessage').textContent=active.options.needPower&&s.pRatio<1?'⚡ Construis une centrale, une éolienne ou un barrage.':active.options.needWater&&s.wRatio<1?'💧 La ville manque d’eau potable.':s.congestion>1.3?'🚗 Embouteillages ! Ajoute des avenues et des routes.':s.roadRatio<.95?'🛣️ Raccorde les habitations aux routes.':s.housing===0?'🏠 Commence par construire des logements.':'✅ La ville se développe. Consulte le budget chaque mois.';
+ refreshControls();
+}
+function openAction(id){if(!active)return;({budget:showBudget,loans:showLoans,taxes:showTaxes,export:showExport,save:()=>persist(true),worlds:showWorldList,services:showServices})[id]?.()}
+function line(label,value){return `<div class="listrow"><span>${label}</span><b>${value}</b></div>`}
+function showBudget(){const s=allStats(),r=active.lastReport;
+ modal('💶 Budget et finances',`<div class="summary-grid"><div class="summary"><span>Trésorerie</span><strong>${active.options.unlimited?'∞':euros(active.money)}</strong></div><div class="summary"><span>Recettes / mois</span><strong>${euros(r.income||0)}</strong></div><div class="summary"><span>Solde / mois</span><strong>${r.profit>=0?'+':''}${euros(r.profit||0)}</strong></div></div>
+ <h3>Recettes du dernier mois</h3>${line('Loyers des logements municipaux',euros(r.rent||0))}${line('Impôts et taxes',euros(r.taxes||0))}${line('Exportation d’électricité',euros(r.exportIncome||0))}
+ <h3>Dépenses du dernier mois</h3>${line('Entretien bâtiments et infrastructures',euros(r.maintenance||0))}${line('Remboursement des prêts',euros(r.loanPayments||0))}
+ <h3>Capacités actuelles</h3>${line('Population / places disponibles',fmt(active.pop)+' / '+fmt(s.housing))}${line('Électricité excédentaire',fmt(Math.max(0,s.power-s.powerNeed))+' MWh/mois')}
+ <div class="button-row"><button class="primary" id="budgetLoans">🏦 Faire un prêt</button><button class="secondary" id="budgetTax">⚖️ Impôts</button><button class="secondary" id="budgetExport">⚡ Exportations</button></div><p class="note">Les prix et revenus représentent des ordres de grandeur simplifiés du jeu. Les résultats sont recalculés à la fin de chaque mois.</p>`);
+ $('budgetLoans').onclick=showLoans;$('budgetTax').onclick=showTaxes;$('budgetExport').onclick=showExport;}
+function showTaxes(){modal('⚖️ Fiscalité',`<p>Les taux influencent les recettes du prochain mois. Des taxes trop fortes réduisent la satisfaction des habitants.</p>${[
+ ['residential','Impôts résidentiels'],['commercial','Taxes commerciales'],['industrial','Taxes industrielles']].map(([k,v])=>`<div class="field"><label for="tax-${k}">${v} — <b id="val-${k}">${active.tax[k]} %</b></label><input id="tax-${k}" type="range" min="0" max="25" step="1" value="${active.tax[k]}" style="width:100%;accent-color:#f9c96e"></div>`).join('')}<div class="button-row"><button class="primary" id="returnBudget">Revenir au budget</button></div>`);
+ for(const k of Object.keys(TAX_DEFAULT))$('tax-'+k).oninput=e=>{active.tax[k]=Number(e.target.value);$('val-'+k).textContent=active.tax[k]+' %';persist();refreshUI()};$('returnBudget').onclick=showBudget;}
+function showLoans(){const loans=active.loans||[];
+ modal('🏦 Emprunts municipaux',`<p>Financement à <b>3,5 % par an</b> avec mensualités fixes. Les remboursements sont prélevés chaque mois de jeu. Maximum 4 prêts actifs.</p><div class="summary-grid"><div class="summary"><span>Prêts actifs</span><strong>${loans.length} / 4</strong></div><div class="summary"><span>Capital restant</span><strong>${euros(loans.reduce((s,l)=>s+l.remaining,0))}</strong></div><div class="summary"><span>Mensualités</span><strong>${euros(loans.reduce((s,l)=>s+l.payment,0))}</strong></div></div>${loans.length?`<h3>Prêts en cours</h3>${loans.map(l=>line(euros(l.remaining)+' restant',euros(l.payment)+'/mois · '+l.monthsLeft+' mois')).join('')}`:''}
+ <h3>Nouveau prêt</h3><div class="field"><label for="loanYears">Durée de remboursement</label><select id="loanYears"><option value="2">2 ans — 24 mois</option><option value="5" selected>5 ans — 60 mois</option><option value="10">10 ans — 120 mois</option></select></div><div class="button-row">${[2000000,10000000,25000000,50000000].map(a=>`<button class="btn-card" data-borrow="${a}" ${loans.length>=4?'disabled':''}><b>+ ${euros(a)}</b><small id="loan-${a}">${euros(loanPayment(a,5))} / mois</small></button>`).join('')}</div><div class="button-row"><button class="secondary" id="loanBudget">← Budget</button></div>`);
+ $('loanYears').onchange=()=>[2000000,10000000,25000000,50000000].forEach(a=>$('loan-'+a).textContent=euros(loanPayment(a,Number($('loanYears').value)))+'/mois');
+ $('modalBody').querySelectorAll('[data-borrow]').forEach(b=>b.onclick=()=>takeLoan(Number(b.dataset.borrow),Number($('loanYears').value)));$('loanBudget').onclick=showBudget;}
+function showExport(){const s=allStats(),surplus=Math.max(0,s.power-s.powerNeed);
+ modal('⚡ Exportation d’électricité',`<p>Vends automatiquement la production excédentaire chaque mois. Les besoins des habitants et des entreprises sont servis en premier.</p><div class="summary-grid"><div class="summary"><span>Production</span><strong>${fmt(s.power)}</strong></div><div class="summary"><span>Consommation</span><strong>${fmt(s.powerNeed)}</strong></div><div class="summary"><span>Surplus</span><strong>${fmt(surplus)}</strong></div></div>${line('Prix indicatif de vente','83 € / MWh')}${line('Revenu estimé / mois',euros(surplus*83))}<div class="checkbox-row"><input type="checkbox" id="exportSwitch" ${active.exportPower?'checked':''}><label for="exportSwitch">Activer la vente automatique du surplus</label></div><div class="button-row"><button class="primary" id="exportBudget">Voir le budget</button></div><p class="note">1 unité de production = 1 MWh par mois de jeu, selon les règles simplifiées du simulateur.</p>`);
+ $('exportSwitch').onchange=e=>{active.exportPower=e.target.checked;persist();toast(active.exportPower?'Exportation activée':'Exportation désactivée')};$('exportBudget').onclick=showBudget;}
+function showServices(){const s=allStats();modal('📊 Informations sur la ville',`<div class="summary-grid"><div class="summary"><span>Population</span><strong>${fmt(active.pop)}</strong></div><div class="summary"><span>Satisfaction</span><strong>${s.happiness} %</strong></div><div class="summary"><span>Emplois</span><strong>${fmt(s.jobs)}</strong></div></div>${line('Capacité logements',fmt(s.housing))}${line('Accès aux routes',Math.round(s.roadRatio*100)+' %')}${line('Électricité produite / demandée',fmt(s.power)+' / '+fmt(s.powerNeed))}${line('Eau fournie / demandée',fmt(s.water)+' / '+fmt(s.waterNeed))}${line('Trafic (demande / capacité)',Math.round(s.congestion*100)+' %')}${line('Nombre de bâtiments et infrastructures',fmt(s.buildings))}${line('Crédits en cours',String(active.loans.length))}<div class="button-row"><button class="primary" id="infoBudget">💶 Budget</button><button class="secondary" id="infoExport">⚡ Surplus électrique</button></div>`);$('infoBudget').onclick=showBudget;$('infoExport').onclick=showExport;}
+function inspectTile(t){const d=TYPES[t.type];if(!d){modal('🏛️ Hôtel de ville',`<p>Point de départ de ta ville. Cet édifice est protégé contre la démolition.</p>`);return}
+ modal(d.icon+' '+d.name,`${line('Coordonnées',t.x+' / '+t.z)}${line('Prix de construction',euros(d.cost))}${line('Entretien mensuel',euros(d.upkeep||0))}${d.people?line('Capacité d’accueil',fmt(d.people)+' habitants'):''}${d.jobs?line('Emplois',fmt(d.jobs)):''}${d.power?line('Électricité produite',fmt(d.power)+' MWh/mois'):''}${d.water?line('Eau fournie',fmt(d.water)+' unités/mois'):''}${line('Raccordement à une route',adjacentRoad(t.x,t.z)?'Oui':'Non')}<p class="note">Le terrain est calculé dans le monde courant.</p>`);
+}
+function scale(){return (view==='3d'?25:24)*zoom}
+function origin(){return {x:screenW*.54+panX,y:screenH*.46+panY}}
+function project(x,z,h=0){const s=scale(),o=origin(),dx=x-(GRID-1)/2,dz=z-(GRID-1)/2;
+ if(view==='2d')return {x:o.x+dx*s,y:o.y+dz*s};
+ const c=Math.cos(yaw),t=Math.sin(yaw);
+ return {x:o.x+(dx*c-dz*t)*s,y:o.y+(dx*t+dz*c)*s*.59-h*s*.86};
+}
+function unproject(sx,sy){const s=scale(),o=origin(),u=(sx-o.x)/s,v=(sy-o.y)/s;
+ if(view==='2d')return {x:Math.round(u+(GRID-1)/2),z:Math.round(v+(GRID-1)/2)};
+ const t=v/.59,c=Math.cos(yaw),sn=Math.sin(yaw);
+ return {x:Math.round(u*c+t*sn+(GRID-1)/2),z:Math.round(-u*sn+t*c+(GRID-1)/2)};
+}
+function poly(points,color,outline='rgba(0,0,0,.1)'){if(!points.length)return;ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);ctx.closePath();ctx.fillStyle=color;ctx.fill();if(outline){ctx.strokeStyle=outline;ctx.lineWidth=.6;ctx.stroke()}}
+function segment(a,b,color,width=2){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke()}
+function disk(x,y,r,color){ctx.beginPath();ctx.arc(x,y,Math.max(1,r),0,Math.PI*2);ctx.fillStyle=color;ctx.fill()}
+function shade(hex,mul){const s=hex.replace('#','');if(s.length!==6)return hex;return '#'+[0,2,4].map(i=>clamp(Math.round(parseInt(s.slice(i,i+2),16)*mul),0,255).toString(16).padStart(2,'0')).join('')}
+function corners(x,z,w=1,d=1,h=0){return [project(x-w/2,z-d/2,h),project(x+w/2,z-d/2,h),project(x+w/2,z+d/2,h),project(x-w/2,z+d/2,h)]}
+function drawBox(x,z,w,d,h,color,base=0){
+ if(view==='2d'){const p=project(x,z),s=scale();ctx.fillStyle=color;ctx.fillRect(p.x-w*s/2,p.y-d*s/2,w*s,d*s);ctx.strokeStyle=shade(color,.72);ctx.lineWidth=1.5;ctx.strokeRect(p.x-w*s/2,p.y-d*s/2,w*s,d*s);return}
+ const bottom=corners(x,z,w,d,base),top=corners(x,z,w,d,base+h);
+ const faceDepths=[[-1,0],[0,1],[1,0],[0,-1]].map(([dx,dz],i)=>({i,d:dx*Math.sin(yaw)+dz*Math.cos(yaw)})).sort((a,b)=>a.d-b.d);
+ faceDepths.forEach(({i,d})=>{const j=(i+1)%4;poly([bottom[i],bottom[j],top[j],top[i]],shade(color,d>.2?.77:.91),null)});
+ poly(top,shade(color,1.14),'rgba(255,255,255,.15)');
+}
+function groundColor(t,x,z){const r=rand2(x,z,active?.seed||0);
+ if(t==='river')return r>.6?'#3694bf':'#3b9cc5';if(t==='shore')return '#d5cb91';if(t==='forest')return r>.5?'#69a45d':'#73a966';if(t==='flower')return '#92bd72';return ['#94bf74','#91bc72','#99c77b','#8eb96c'][Math.floor(r*4)];}
+function roadConnections(x,z){return [[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dz])=>isRoad(at(x+dx,z+dz)?.type))}
+function groundTile(x,z){const tr=terrain(x,z),tile=at(x,z),t=tile?.type;
+ let color=groundColor(tr,x,z);
+ if(isRoad(t))color=TYPES[t].color;
+ if(t==='park')color='#67b779';
+ if(view==='2d'){
+  const p=project(x,z),s=scale();ctx.fillStyle=color;ctx.fillRect(Math.floor(p.x-s/2),Math.floor(p.y-s/2),Math.ceil(s)+1,Math.ceil(s)+1);
+  ctx.strokeStyle='rgba(21,65,37,.16)';ctx.lineWidth=.5;ctx.strokeRect(p.x-s/2,p.y-s/2,s,s);
+  if(tr==='river'&&!t){segment({x:p.x-s*.21,y:p.y-s*.1},{x:p.x+s*.2,y:p.y-s*.1},'rgba(213,248,250,.4)',1.5)}
+  if(tr==='forest'&&!t&&rand2(x,z,active?.seed||0)>.9){disk(p.x,p.y,s*.22,'#3d8551');disk(p.x-s*.08,p.y-s*.04,s*.14,'#4d9757')}
+  if(tr==='flower'&&!t){disk(p.x+s*.23,p.y,s*.07,'#f5d66e')}
+ }else{
+  poly(corners(x,z),color,'rgba(31,61,45,.19)');
+  if(tr==='river'&&!t){const a=project(x-.27,z-.1,.01),b=project(x+.23,z-.1,.01);segment(a,b,'rgba(204,244,251,.33)',1.15)}
+  if(tr==='forest'&&!t&&rand2(x,z,active.seed)>.91){drawTree(x,z,.63)}
+ }
+ if(isRoad(t))drawRoad(x,z,t);
+}
+function drawRoad(x,z,t){const s=scale(),con=roadConnections(x,z),dirs=con.length?con:[[0,-1],[0,1]],markup=t==='avenue'?'#f2d46b':'#e7e7c3';
+ if(t==='roundabout'){
+  const p=project(x,z);disk(p.x,p.y,s*(view==='2d'?.25:.16),'#699268');disk(p.x,p.y,s*.06,'#dec273');return;
+ }
+ for(const [dx,dz] of dirs){const a=project(x,z,.09),b=project(x+dx*.36,z+dz*.36,.09);segment(a,b,markup,Math.max(1,s*.055))}
+ if(t==='avenue'){
+  const a=project(x-.34,z-.34,.09),b=project(x+.34,z+.34,.09);segment(a,b,'rgba(255,255,255,.28)',1);
+ }
+ if(terrain(x,z)==='river'){
+  // Les voies traversant la rivière sont des ponts à garde-corps.
+  segment(project(x-.46,z-.44,.2),project(x+.46,z-.44,.2),'#e8e5dc',Math.max(1,s*.08));
+  segment(project(x-.46,z+.44,.2),project(x+.46,z+.44,.2),'#e8e5dc',Math.max(1,s*.08));
+ }
+}
+function drawTree(x,z,height=1){const p=project(x,z),s=scale();if(view==='2d'){disk(p.x,p.y,s*.24*height,'#25764b');disk(p.x-s*.07,p.y-s*.04,s*.14*height,'#45a265')}else{
+  drawBox(x,z,.13,.13,.36*height,'#805b3c');const q=project(x,z,.72*height);disk(q.x,q.y,s*.25*height,'#287948');disk(q.x-s*.065,q.y-s*.05,s*.17*height,'#48a664');
+ }}
+function building(t){const x=t.x,z=t.z,type=t.type,d=TYPES[type];
+ if(type==='townhall'){
+  drawBox(x,z,.92,.84,2,'#eee6ca');drawBox(x,z,.99,.9,.22,'#b95146',2);const p=project(x,z,2.6);disk(p.x,p.y,Math.max(3,scale()*.14),'#e9be63');return;
+ }
+ if(type==='park'){drawTree(x-.23,z-.22,.75);drawTree(x+.22,z+.18,.8);return}
+ if(isRoad(type))return;
+ if(type==='solar'){
+  for(let i=-1;i<=1;i++)drawBox(x+i*.25,z,.22,.65,.13,'#184a89',.15);return;
+ }
+ if(type==='wind'){
+  drawBox(x,z,.12,.12,3.8,'#dce8ea');const q=project(x,z,3.65),s=scale();disk(q.x,q.y,s*.09,'#9db3be');for(let i=0;i<3;i++){const a=i*Math.PI*2/3+Date.now()/30000;segment(q,{x:q.x+Math.cos(a)*s*.48,y:q.y+Math.sin(a)*s*.48},'#e4f0f3',Math.max(1,s*.035))}return;
+ }
+ if(type==='dam'){
+  drawBox(x,z,.9,.85,1.6,'#c3d1d5');const p=project(x,z,1.4),q=project(x,z+.65,.07);segment(p,q,'#7bd5ee',Math.max(2,scale()*.13));return;
+ }
+ if(type==='waterTower'){
+  for(const [dx,dz] of [[-.24,-.24],[.24,-.24],[-.24,.24],[.24,.24]])drawBox(x+dx,z+dz,.1,.1,2.7,'#c6e0e6');drawBox(x,z,.88,.82,.7,'#68a9c4',2.7);return;
+ }
+ if(type==='power'){
+  drawBox(x,z,.9,.9,2.1,d.color);drawBox(x+.18,z-.18,.21,.21,2.5,'#b3c1c3',2.05);drawBox(x-.24,z+.14,.18,.18,2.1,'#9cb0b2',2.05);return;
+ }
+ if(type==='factory'){
+  drawBox(x,z,.91,.85,1.55,d.color);drawBox(x+.26,z-.22,.22,.22,1.65,'#8c7174',1.55);return;
+ }
+ if(type==='clinic'||type==='school'||type==='police'||type==='fire'||type==='shop'||type==='waterPlant'){
+  drawBox(x,z,.91,.83,d.height,d.color);drawBox(x,z,.96,.88,.22,shade(d.color,.7),d.height);
+  if(type==='clinic'){const p=project(x,z,d.height+.25);ctx.font='bold '+Math.max(11,Math.round(scale()*.57))+'px sans-serif';ctx.textAlign='center';ctx.fillStyle='#e34a48';ctx.fillText('+',p.x,p.y)}
+  return;
+ }
+ const w=type==='tower'?.7:.86;
+ drawBox(x,z,w,w,d.height,d.color);
+ if(type==='house'||type==='luxury'){
+  if(view==='3d'){const a=project(x-.44,z-.44,d.height),b=project(x+.44,z-.44,d.height),c=project(x,z,d.height+.7);poly([a,b,c],shade(d.color,.65));}
+  else {const p=project(x,z);ctx.fillStyle='#b3534a';ctx.beginPath();ctx.moveTo(p.x,p.y-scale()*.34);ctx.lineTo(p.x+scale()*.32,p.y);ctx.lineTo(p.x,p.y+scale()*.34);ctx.lineTo(p.x-scale()*.32,p.y);ctx.closePath();ctx.fill()}
+ }else if(view==='3d'){
+  for(let h=.8;h<d.height-.2;h+=.66){const p=project(x,z+.01,h);const s=scale();ctx.fillStyle='rgba(212,241,255,.67)';ctx.fillRect(p.x-s*.11,p.y-s*.065,s*.22,s*.13)}
+ }else{
+  const p=project(x,z);ctx.fillStyle='#c3e5f2';ctx.fillRect(p.x-scale()*.2,p.y-scale()*.2,scale()*.4,scale()*.35)}
+}
+function roadTiles(){return [...tiles.values()].filter(t=>isRoad(t.type))}
+function getNeighbors(x,z){return [[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dz])=>({x:x+dx,z:z+dz})).filter(t=>isRoad(at(t.x,t.z)?.type))}
+function trafficTick(dt){if(!active)return;
+ const roads=roadTiles(),s=allStats();if(roads.length===0){cars.length=0;return}
+ const desired=Math.min(90,Math.max(2,Math.floor(active.pop/6+s.industries*3)));
+ while(cars.length<desired){const t=roads[Math.floor(Math.random()*roads.length)];cars.push({x:t.x,z:t.z,from:{x:t.x,z:t.z},to:null,t:0,color:['#f66d64','#ecca66','#f2f6ff','#4077cc','#45b39d'][Math.floor(Math.random()*5)],direction:0})}
+ if(cars.length>desired)cars.length=desired;
+ const baseSpeed=(.85/(1+Math.max(0,s.congestion-.7)*2.6));
+ for(const car of cars){
+  if(!car.to){const options=getNeighbors(car.from.x,car.from.z);if(!options.length)continue;let next=options[Math.floor(Math.random()*options.length)];if(options.length>1){const filtered=options.filter(t=>t.x!==car.prev?.x||t.z!==car.prev?.z);if(filtered.length)next=filtered[Math.floor(Math.random()*filtered.length)]}car.to=next;car.direction=Math.atan2(car.to.z-car.from.z,car.to.x-car.from.x)}
+  const near=cars.some(other=>other!==car&&other.to&&Math.hypot(other.x-car.x,other.z-car.z)<.32&&other.t>car.t&&other.to.x===car.to.x&&other.to.z===car.to.z);
+  if(!near)car.t=Math.min(1,car.t+dt*baseSpeed*(.72+rand2(car.from.x,car.from.z)*.5));
+  car.x=car.from.x+(car.to.x-car.from.x)*car.t;car.z=car.from.z+(car.to.z-car.from.z)*car.t;
+  if(car.t>=1){car.prev=car.from;car.from=car.to;car.to=null;car.t=0}
+ }
+}
+function drawCar(car){const p=project(car.x,car.z,.22),s=scale();if(view==='2d'){
+ ctx.save();ctx.translate(p.x,p.y);ctx.rotate(car.direction);ctx.fillStyle=car.color;ctx.fillRect(-s*.21,-s*.13,s*.42,s*.26);ctx.fillStyle='#b9e4ed';ctx.fillRect(-s*.02,-s*.115,s*.11,s*.23);ctx.restore();
+ }else{drawBox(car.x,car.z,.26,.4,.20,car.color,.13);disk(p.x,p.y,Math.max(1,s*.04),'#b9dfea')}}
+function draw(){if(!active){ctx.fillStyle='#7ab6d9';ctx.fillRect(0,0,screenW,screenH);return}
+ const bg=ctx.createLinearGradient(0,0,0,screenH);bg.addColorStop(0,'#a4d7ef');bg.addColorStop(.75,'#dcefe0');bg.addColorStop(1,'#a4cf91');ctx.fillStyle=bg;ctx.fillRect(0,0,screenW,screenH);
+ const all=[];for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++)all.push({x,z,depth:view==='3d'?x*Math.sin(yaw)+z*Math.cos(yaw):z});
+ if(view==='3d')all.sort((a,b)=>a.depth-b.depth);
+ // Draw terrain behind all the building shapes to avoid hiding high towers.
+ for(const t of all)groundTile(t.x,t.z);
+ const buildings=[...tiles.values()].filter(t=>t.type!=='road'&&t.type!=='avenue'&&t.type!=='roundabout');
+ if(view==='3d')buildings.sort((a,b)=>(a.x-b.x)*Math.sin(yaw)+(a.z-b.z)*Math.cos(yaw));
+ for(const t of buildings)building(t);
+ for(const car of cars)drawCar(car);
+ if(areaPreview&&active){
+  const cells=areaPreview.cells;
+  for(const cell of cells){const t=resolveZone(selected,0),valid=canPlace(t,cell.x,cell.z);poly(corners(cell.x,cell.z,1,1,.16),valid?'rgba(97,211,170,.37)':'rgba(255,100,100,.37)',valid?'rgba(44,155,104,.6)':'rgba(180,46,46,.6)')}
+ }
+ // Render water/dam legend and map mode text in clear corner.
+ ctx.fillStyle='rgba(15,31,46,.66)';ctx.beginPath();ctx.roundRect(12,screenH*.56,view==='3d'?67:65,25,7);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.textAlign='left';ctx.fillText(view==='3d'?'◈ 3D':'▦ 2D',23,screenH*.56+17);
+}
+function previewCells(start,end){if(mode==='area'){
+ const cells=[];const x1=clamp(Math.min(start.x,end.x),0,GRID-1),x2=clamp(Math.max(start.x,end.x),0,GRID-1),z1=clamp(Math.min(start.z,end.z),0,GRID-1),z2=clamp(Math.max(start.z,end.z),0,GRID-1);
+ for(let z=z1;z<=z2;z++)for(let x=x1;x<=x2;x++)cells.push({x,z});return cells.slice(0,450);
+ }
+ if(mode==='line'){
+ const cells=[];let x0=start.x,z0=start.z,x1=end.x,z1=end.z,dx=Math.abs(x1-x0),dz=Math.abs(z1-z0),sx=x0<x1?1:-1,sz=z0<z1?1:-1,err=dx-dz;
+ while(cells.length<GRID*2){cells.push({x:x0,z:z0});if(x0===x1&&z0===z1)break;const e=2*err;if(e>-dz){err-=dz;x0+=sx}if(e<dx){err+=dx;z0+=sz}}
+ return cells;
+ }
+ return [end];
+}
+function setPreview(start,end){const cells=previewCells(start,end);areaPreview={cells};const p=planBuild(selected,cells);$('selectionInfo').hidden=false;$('selectionInfo').textContent=p.plan.length+' cases disponibles · Prix : '+euros(p.cost)}
+function endPreview(){areaPreview=null;$('selectionInfo').hidden=true}
+function setMode(next){mode=next;endPreview();refreshControls()}
+function setView(next){view=next;endPreview();refreshControls();toast('Vue '+next.toUpperCase()+' activée')}
+function zoomBy(ratio){zoom=clamp(zoom*ratio,.35,3.4)}
+function eventPos(e){return {x:e.clientX,y:e.clientY}}
+function onDown(e){if(!active||$('overlay').classList.contains('open'))return;
+ canvas.setPointerCapture?.(e.pointerId);pointerPoints.set(e.pointerId,eventPos(e));
+ if(pointerPoints.size===2){const ps=[...pointerPoints.values()];pinchDistance=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);pointerStart=null;endPreview();return}
+ pointerStart={id:e.pointerId,first:eventPos(e),last:eventPos(e),cell:unproject(e.clientX,e.clientY),moved:false,rotate:e.button===2||e.altKey};
+ if(mode!=='single'&&!pointerStart.rotate)setPreview(pointerStart.cell,pointerStart.cell);
+}
+function onMove(e){if(!pointerPoints.has(e.pointerId))return;
+ const old=pointerPoints.get(e.pointerId);pointerPoints.set(e.pointerId,eventPos(e));
+ if(pointerPoints.size>=2){const ps=[...pointerPoints.values()],d=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);if(pinchDistance>0)zoomBy(d/pinchDistance);pinchDistance=d;return}
+ if(!pointerStart||pointerStart.id!==e.pointerId)return;
+ const dx=e.clientX-pointerStart.last.x,dy=e.clientY-pointerStart.last.y;
+ if(Math.hypot(e.clientX-pointerStart.first.x,e.clientY-pointerStart.first.y)>7)pointerStart.moved=true;
+ if(pointerStart.rotate){if(view==='3d')yaw+=dx*.009;else{panX+=dx;panY+=dy}}
+ else if(mode==='single'){if(pointerStart.moved){panX+=dx;panY+=dy}}
+ else setPreview(pointerStart.cell,unproject(e.clientX,e.clientY));
+ pointerStart.last=eventPos(e);
+}
+function onUp(e){pointerPoints.delete(e.pointerId);if(pointerPoints.size){pointerStart=null;pinchDistance=0;endPreview();return}
+ if(!pointerStart||pointerStart.id!==e.pointerId){endPreview();return}
+ const p=pointerStart;pointerStart=null;
+ if(p.rotate){endPreview();return}
+ if(mode==='single'&&!p.moved)build(selected,[p.cell]);
+ else if(mode!=='single')build(selected,previewCells(p.cell,unproject(e.clientX,e.clientY)));
+ endPreview();}
+function handleKeyboard(e){if(e.target.matches('input,textarea,select')||e.ctrlKey||e.metaKey)return;
+ if(e.key==='Escape'){if($('overlay').classList.contains('open')&&active){setOpen(false);return}selected='inspect';refreshControls();return}
+ if($('overlay').classList.contains('open'))return;
+ if(e.key===' '){e.preventDefault();paused=!paused;refreshControls();return}
+ const k=e.key.toLowerCase();if(k==='2'||k==='3'){setView(k==='2'?'2d':'3d');return}
+ if(k==='r'){yaw+=Math.PI/4;return}if(k==='b'){selected='bulldoze';currentCategory='management';refreshControls();return}
+ if(k==='+'||k==='='){zoomBy(1.15);return}if(k==='-'){zoomBy(1/1.15);return}
+ const step=35;if(k==='arrowleft'||k==='a')panX+=step;if(k==='arrowright'||k==='d')panX-=step;if(k==='arrowup'||k==='w')panY+=step;if(k==='arrowdown'||k==='s')panY-=step;
+ if(['arrowleft','arrowright','arrowup','arrowdown'].includes(k))e.preventDefault();
+}
+function resize(){const dpr=Math.min(window.devicePixelRatio||1,2);screenW=window.innerWidth;screenH=window.innerHeight;canvas.width=Math.round(screenW*dpr);canvas.height=Math.round(screenH*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}
+function loop(now){requestAnimationFrame(loop);
+ const dt=Math.min(.1,(now-framePrev)/1000||0);framePrev=now;
+ if(active){if(!paused){simAccum+=dt*speed;while(simAccum>=18){simAccum-=18;monthEnd()}trafficTick(dt*speed)}saveAccum+=dt;if(saveAccum>=15){saveAccum=0;persist()}}
+ if(now-lastDraw>=32){draw();lastDraw=now}
+}
+function attachControls(){
+ canvas.addEventListener('pointerdown',onDown);canvas.addEventListener('pointermove',onMove);canvas.addEventListener('pointerup',onUp);canvas.addEventListener('pointercancel',onUp);canvas.addEventListener('contextmenu',e=>e.preventDefault());
+ canvas.addEventListener('wheel',e=>{e.preventDefault();zoomBy(Math.exp(-e.deltaY*.0015))},{passive:false});
+ $('zoomIn').onclick=()=>zoomBy(1.23);$('zoomOut').onclick=()=>zoomBy(1/1.23);
+ $('rotate').onclick=()=>{yaw+=Math.PI/4;toast('Carte tournée de 45°')};
+ $('recenter').onclick=()=>{panX=0;panY=0;zoom=1;yaw=Math.PI/4};
+ $('viewToggle').onclick=()=>setView(view==='3d'?'2d':'3d');
+ $('speedBtn').onclick=()=>{const rates=[1,2,4,8];speed=rates[(rates.indexOf(speed)+1)%rates.length];refreshControls();toast('Vitesse du temps : ×'+speed)};
+ $('pauseBtn').onclick=()=>{paused=!paused;refreshControls()};
+ $('worldsBtn').onclick=showWorldList;$('cityInfo').onclick=showServices;
+ $('modeSingle').onclick=()=>setMode('single');$('modeArea').onclick=()=>setMode('area');$('modeLine').onclick=()=>setMode('line');
+ document.querySelectorAll('.category').forEach(b=>b.onclick=()=>{currentCategory=b.dataset.cat;const first=Object.entries(TYPES).find(([_,d])=>d.category===currentCategory);if(first)selected=first[0];if(TYPES[selected]?.zone)mode='area';else if(isRoad(selected))mode='line';else mode='single';refreshControls()});
+ $('collapseStatus').onclick=()=>{const el=$('statusContents');el.hidden=!el.hidden;$('collapseStatus').textContent=el.hidden?'+':'−'};
+ window.addEventListener('keydown',handleKeyboard);window.addEventListener('resize',resize);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)persist()});window.addEventListener('beforeunload',()=>persist());
+ $('overlay').addEventListener('click',e=>{if(e.target===$('overlay')&&active)setOpen(false)});
+}
+function init(){worlds=readWorlds();resize();attachControls();refreshControls();showWorldList();requestAnimationFrame(loop)}
+init();
+})();
+
+</script>
+</body>
+</html>
