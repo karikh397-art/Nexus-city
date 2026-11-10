@@ -47,9 +47,19 @@
 
 @media(max-width:630px){.chosen{display:none}.tool-options{justify-content:space-between}.sidebar:has(#statusContents[hidden]){width:144px}.sidebar:has(#statusContents[hidden]) .side-heading{margin-bottom:0}}
 
+/* Ecran de chargement uniquement : les styles du jeu sont conservés. */
+#loadingScreen{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:linear-gradient(155deg,#1b3049,#0e1e33);transition:opacity .28s;pointer-events:auto}
+#loadingScreen.done{opacity:0;pointer-events:none}
+#loadingScreen .loading-content{text-align:center;width:min(320px,80vw);font-size:15px;color:#c5d5e5}
+#loadingScreen strong{display:block;font-size:32px;letter-spacing:2px;color:#fff;margin-bottom:10px}
+#loadingScreen strong em{font-style:normal;color:var(--accent)}
+#loadingScreen .loading-track{height:6px;margin-top:22px;border-radius:9px;background:#ffffff2d;overflow:hidden}
+#loadingScreen .loading-track::before{content:'';display:block;width:36%;height:100%;border-radius:9px;background:var(--accent);animation:loadSlide .75s ease-in-out infinite alternate}
+@keyframes loadSlide{from{transform:translateX(-100%)}to{transform:translateX(280%)}}
 </style>
 </head>
 <body>
+<div id="loadingScreen" role="status" aria-live="polite"><div class="loading-content"><strong>◆ NEXUS <em>CITY</em></strong>Chargement de la ville…<div class="loading-track"></div></div></div>
 <canvas id="world" aria-label="Carte de la ville" tabindex="0"></canvas>
 <header class="topbar" id="topbar">
   <div class="brand"><span class="brand-mark">◆</span><span><strong>NEXUS <em>CITY</em></strong><small id="worldTitle">Simulateur de villes</small></span></div>
@@ -85,6 +95,7 @@
   <button id="viewToggle" class="pill" title="Changer la vue (2/3)">🧊 Vue 3D</button>
   <button id="speedBtn" class="pill">⏩ ×1</button>
   <button id="pauseBtn" class="pill">⏸</button>
+  <button id="undoBtn" class="pill" title="Annuler la dernière construction (Ctrl+Z)" disabled>↶ Annuler</button>
   <button id="worldsBtn" class="pill">🌍 Changer de ville</button>
   <button id="exitBtn" class="pill">🚪 Quitter</button>
 </div>
@@ -144,6 +155,7 @@ const TYPES = {
  dam:        {name:'Barrage hydroélectrique',icon:'🌊',category:'electricity',cost:45000000,upkeep:135000,power:10500,color:'#cad5d8',height:2.2,riverOnly:true},
  waterPlant: {name:'Station de traitement',icon:'🚰',category:'water',cost:13000000,upkeep:78000,water:7800,color:'#6eabd2',height:2.0},
  waterTower: {name:'Château d’eau',icon:'💧',category:'water',cost:2300000,upkeep:14500,water:1800,color:'#78b0cb',height:3.6},
+ removeWater: {name:'Retirer l’eau',icon:'🏞️',category:'water',cost:0},
  zoneRes:    {name:'Zone résidentielle',icon:'🏡',category:'zoning',zone:'house',cost:360000},
  zoneMix:    {name:'Quartier mixte',icon:'🏘️',category:'zoning',zone:'mixed',cost:360000},
  zoneCom:    {name:'Zone commerciale',icon:'🛍️',category:'zoning',zone:'shop',cost:1050000},
@@ -159,12 +171,14 @@ let worlds=[], active=null, tiles=new Map(), owned=new Set(), currentCategory='h
 let view='3d', yaw=Math.PI/4, zoom=1, panX=0, panY=0, screenW=innerWidth, screenH=innerHeight;
 let areaPreview=null, pointerStart=null, pinchDistance=0, pinchCenter=null, pointerPoints=new Map(), hoveredCell=null, showParcels=false;
 let cars=[], drawCache=[], toastTimeout=0, paused=false, speed=1, framePrev=0, simAccum=0, saveAccum=0, lastDraw=0, lastMiniFrame=-1;
+let dryRiver=new Set(), undoStack=[];
 const key=(x,z)=>x+','+z, at=(x,z)=>tiles.get(key(x,z));
 const isRoad=t=>t==='road'||t==='avenue'||t==='roundabout';
 const rand2=(x,z,seed=0)=>{let n=Math.sin(x*127.1+z*311.7+seed*.017)*43758.5453123;return n-Math.floor(n)};
 const riverCenter=z=>Math.round(26+SHIFT+Math.sin((z-SHIFT)*.27+(active?.seed||1)*.00031)*2.6 +Math.sin((z-SHIFT)*.73)*.75);
 function terrain(x,z){
  if(x<0||z<0||x>=GRID||z>=GRID)return 'out';
+ if(dryRiver.has(key(x,z)))return 'grass';
  const center=riverCenter(z),dist=Math.abs(x-center);
  if(dist<=1)return 'river';
  if(dist<=2)return 'shore';
@@ -175,7 +189,7 @@ function terrain(x,z){
 }
 function newWorld(name,startingMoney,needPower,needWater,unlimited){
  const id=String(Date.now())+'-'+Math.floor(Math.random()*1e8);
- const w={id,name:name.trim().slice(0,36)||'Nouvelle ville',seed:Math.floor(Math.random()*999999),gridSize:GRID,options:{startingMoney,needPower,needWater,unlimited},money:startingMoney,pop:0,month:1,tax:{...TAX_DEFAULT},exportPower:false,loans:[],tiles:[],owned:[],lastReport:{income:0,expense:0,profit:0,exportIncome:0,taxes:0,rent:0,business:0,maintenance:0,loanPayments:0},createdAt:Date.now(),updatedAt:Date.now()};
+ const w={id,name:name.trim().slice(0,36)||'Nouvelle ville',seed:Math.floor(Math.random()*999999),gridSize:GRID,options:{startingMoney,needPower,needWater,unlimited},money:startingMoney,pop:0,month:1,tax:{...TAX_DEFAULT},exportPower:false,loans:[],tiles:[],owned:[],lastReport:{income:0,expense:0,profit:0,exportIncome:0,taxes:0,rent:0,business:0,maintenance:0,loanPayments:0},createdAt:Date.now(),updatedAt:Date.now(),filledWater:[]};
  const center=(GRID/2)|0;for(let z=center-5;z<=center+5;z++)for(let x=center-5;x<=center+5;x++)w.owned.push(key(x,z));
  for(let x=center-2;x<=center+2;x++)w.tiles.push({x,z:center+1,type:'road'});
  w.tiles.push({x:center,z:center,type:'townhall'});return w;
@@ -202,12 +216,13 @@ function readWorlds(){
  return [];
 }
 function writeWorlds(){try{localStorage.setItem(STORE,JSON.stringify(worlds));return true}catch{toast('Stockage indisponible : la sauvegarde automatique ne fonctionne pas.');return false}}
-function persist(show=false){if(!active)return;active.tiles=[...tiles.values()].map(({x,z,type})=>({x,z,type}));active.owned=[...owned];active.gridSize=GRID;active.updatedAt=Date.now();writeWorlds();if(show)toast('Ville sauvegardée automatiquement sur cet appareil ✓')}
+function persist(show=false){if(!active)return;active.tiles=[...tiles.values()].map(({x,z,type})=>({x,z,type}));active.owned=[...owned];active.filledWater=[...dryRiver];active.gridSize=GRID;active.updatedAt=Date.now();writeWorlds();if(show)toast('Ville sauvegardée automatiquement sur cet appareil ✓')}
 function ensureWorldMap(w){
  // Automatically migrate existing 34×34 saved maps without resetting finances or buildings.
  if(!w.gridSize||w.gridSize===OLD_GRID){
   w.tiles=(w.tiles||[]).map(t=>({...t,x:t.x+SHIFT,z:t.z+SHIFT}));
   if(Array.isArray(w.owned))w.owned=w.owned.map(k=>{const [x,z]=k.split(',').map(Number);return key(x+SHIFT,z+SHIFT)});
+  if(Array.isArray(w.filledWater))w.filledWater=w.filledWater.map(k=>{const [x,z]=k.split(',').map(Number);return key(x+SHIFT,z+SHIFT)});
   w.gridSize=GRID;
  }
  if(!Array.isArray(w.owned)||w.owned.length===0){
@@ -223,10 +238,10 @@ function activate(w){
  active.money=Number.isFinite(w.money)?w.money:active.options.startingMoney;
  active.pop=Math.max(0,Number(w.pop)||0);active.month=Math.max(1,Math.floor(Number(w.month)||1));
  tiles=new Map();for(const t of w.tiles||[])if((t.type==='townhall'||TYPES[t.type])&&Number.isInteger(t.x)&&Number.isInteger(t.z)&&inGrid(t.x,t.z))tiles.set(key(t.x,t.z),{type:t.type,x:t.x,z:t.z});
- owned=new Set(w.owned);active.tax={...TAX_DEFAULT,...(active.tax||{})};active.loans=active.loans||[];
+ owned=new Set(w.owned);dryRiver=new Set(w.filledWater||[]);undoStack=[];active.tax={...TAX_DEFAULT,...(active.tax||{})};active.loans=active.loans||[];
  active.lastReport=active.lastReport||{income:0,expense:0,profit:0};
  view='3d';yaw=Math.PI/4;zoom=defaultZoom();panX=0;panY=0;paused=false;speed=1;simAccum=0;saveAccum=0;cars=[];
- selected='house';currentCategory='housing';mode='single';showParcels=false;setOpen(false);
+ selected='house';currentCategory='housing';mode='single';showParcels=false;$('undoBtn').disabled=true;setOpen(false);
  if(screenW<630){$('statusContents').hidden=true;$('collapseStatus').textContent='+'}else{$('statusContents').hidden=false;$('collapseStatus').textContent='−'}
  refreshControls();refreshUI();persist();toast('Bienvenue à '+w.name+' !');
 }
@@ -276,6 +291,7 @@ function canPlace(type,x,z){
  if(type==='inspect')return true;
  if(type==='bulldoze')return !!at(x,z)&&at(x,z).type!=='townhall';
  if(type==='buyLand')return !owned.has(key(x,z));
+ if(type==='removeWater')return terrain(x,z)==='river' && !at(x,z) && owned.has(key(x,z));
  if(!owned.has(key(x,z))||at(x,z))return false;
  const d=TYPES[type];if(!d)return false;
  const land=terrain(x,z);return d.riverOnly?land==='river':isRoad(type)||land!=='river';
@@ -316,7 +332,7 @@ function planBuild(type,cells){
   for(const c of candidates){const t=resolveZone(type,0);if(!canPlace(t,c.x,c.z))continue;plan.push({...c,type:t});cost+=placementCost(t,c.x,c.z)}
   return {plan,cost,roads:0};
  }
- // Residential zones include streets and, when possible, a road back to the existing network.
+ // Toutes les zones (résidentielle, mixte, commerciale, industrielle) incluent des rues.
  const valid=candidates.filter(c=>canPlace(resolveZone(type,0),c.x,c.z));
  if(!valid.length)return {plan:[],cost:0,roads:0};
  const minX=Math.min(...valid.map(c=>c.x)),maxX=Math.max(...valid.map(c=>c.x));
@@ -344,18 +360,34 @@ function planBuild(type,cells){
  const plan=[...houseCells,...streets];
  return {plan,cost:plan.reduce((sum,c)=>sum+placementCost(c.type,c.x,c.z),0),roads:streets.length};
 }
+function rememberUndo(){
+ undoStack.push({money:active.money,pop:active.pop,tiles:[...tiles.values()].map(t=>({...t})),owned:[...owned],filledWater:[...dryRiver]});
+ if(undoStack.length>30)undoStack.shift();$('undoBtn').disabled=false;
+}
+function undoLast(){
+ if(!active||!undoStack.length){toast('Rien à annuler.');return}
+ const prev=undoStack.pop();active.money=prev.money;active.pop=prev.pop;
+ tiles=new Map(prev.tiles.map(t=>[key(t.x,t.z),t]));owned=new Set(prev.owned);dryRiver=new Set(prev.filledWater);
+ cars=[];persist();refreshUI();$('undoBtn').disabled=undoStack.length===0;toast('Dernière construction annulée.');
+}
 function build(type,cells){if(!active)return;
  if(type==='inspect'){const c=cells[0],t=c&&at(c.x,c.z);if(t)inspectTile(t);else if(c&&owned.has(key(c.x,c.z)))toast('Terrain acheté et libre.');else toast('Terrain disponible à l’achat.');return}
+ if(type==='removeWater'){
+  const targets=[...new Set(cells.filter(c=>canPlace('removeWater',c.x,c.z)).map(c=>key(c.x,c.z)))];
+  if(!targets.length){toast('Sélectionne une case de rivière achetée et libre.');return}
+  rememberUndo();for(const k of targets)dryRiver.add(k);persist();refreshUI();toast(targets.length+' case(s) d’eau retirée(s).');return;
+ }
  if(type==='bulldoze'){
-  let refund=0,n=0;const seen=new Set();for(const c of cells){const k=key(c.x,c.z),t=at(c.x,c.z);if(seen.has(k)||!t||t.type==='townhall')continue;seen.add(k);
-   refund+=Math.round(TYPES[t.type].cost*.6);tiles.delete(k);n++;
+  let refund=0;const seen=new Set(),targets=[];for(const c of cells){const k=key(c.x,c.z),t=at(c.x,c.z);if(seen.has(k)||!t||t.type==='townhall')continue;seen.add(k);
+   refund+=Math.round(TYPES[t.type].cost*.6);targets.push(k);
   }
-  if(n){if(!active.options.unlimited)active.money+=refund;active.pop=Math.min(active.pop,allStats().housing);persist();refreshUI();toast(n+' construction(s) démolie(s) · +'+euros(refund)+' (60 % du prix initial)')}
+  if(targets.length){rememberUndo();for(const k of targets)tiles.delete(k);if(!active.options.unlimited)active.money+=refund;active.pop=Math.min(active.pop,allStats().housing);persist();refreshUI();toast(targets.length+' construction(s) démolie(s) · +'+euros(refund)+' (60 % du prix initial)')}
   else toast('Aucune construction à démolir à cet emplacement.');return;
  }
  const {plan,cost,roads}=planBuild(type,cells);
  if(!plan.length){toast(type==='dam'?'Le barrage doit être construit sur une rivière achetée.':type==='buyLand'?'Ce terrain est déjà à toi.':'Terrain non acheté, occupé ou non constructible.');return}
  if(noMoney(cost)){toast('Budget insuffisant : '+euros(cost)+' nécessaires.');return}
+ rememberUndo();
  for(const c of plan){if(type==='buyLand')owned.add(key(c.x,c.z));else tiles.set(key(c.x,c.z),c)}
  if(!active.options.unlimited)active.money-=cost;
  persist();refreshUI();toast(type==='buyLand'?plan.length+' terrain(s) acheté(s) · '+euros(cost):plan.length+' constructions ('+roads+' routes automatiques) · '+euros(cost));
@@ -436,7 +468,7 @@ function refreshControls(){
   ['budget','💶','Budget'],['loans','🏦','Prêts'],['taxes','⚖️','Impôts'],['export','⚡','Export énergie'],['save','💾','Sauvegarder']
  ]:[];
  $('buildItems').innerHTML=objects.map(([id,d])=>`<button class="build-item ${selected===id?'active':''}" data-type="${id}" title="${esc(d.name)}"><span class="emoji">${d.icon}</span><span><b>${esc(d.name)}</b><small>${d.cost?euros(d.cost):'Action'}</small></span></button>`).join('')+extras.map(([id,ic,n])=>`<button class="build-item" data-action="${id}"><span class="emoji">${ic}</span><span><b>${n}</b><small>Ouvrir</small></span></button>`).join('');
- $('buildItems').querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{selected=b.dataset.type;if(TYPES[selected].zone||selected==='buyLand'){mode='area'}else if(isRoad(selected)){mode='line'}else{mode='single'}refreshControls()});
+ $('buildItems').querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{selected=b.dataset.type;if(TYPES[selected].zone||selected==='buyLand'||selected==='removeWater'){mode='area'}else if(isRoad(selected)){mode='line'}else{mode='single'}refreshControls()});
  $('buildItems').querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>openAction(b.dataset.action));
  $('chosenTool').textContent=(TYPES[selected]?.icon||'👆')+' '+(TYPES[selected]?.name||'');
  $('helpLine').textContent=mode==='navigate'?'🤚 Déplace la carte avec un doigt, pince pour zoomer.':mode==='area'?'Trace ta zone • Pour déplacer la carte, active 🤚 Déplacer ou utilise deux doigts.':mode==='line'?'Trace ta route • 🤚 Déplacer pour naviguer.':'Toucher : construire • Glisser : déplacer • 2 doigts : zoom et déplacement';
@@ -703,7 +735,7 @@ function draw(){if(!active){ctx.fillStyle='#7ab6d9';ctx.fillRect(0,0,screenW,scr
  if(view==='3d')objects.sort((a,b)=>a.depth-b.depth|| (a.type==='car'?-1:1));
  for(const item of objects){if(item.type==='building')building(item.data);else drawCar(item.data)}
  if(areaPreview&&active){
-  const {plan}=planBuild(selected,areaPreview.cells),planned=new Map(plan.map(c=>[key(c.x,c.z),c.type]));
+  const {plan}=selected==='removeWater'?{plan:areaPreview.cells.filter(c=>canPlace('removeWater',c.x,c.z)).map(c=>({...c,type:'removeWater'}))}:planBuild(selected,areaPreview.cells),planned=new Map(plan.map(c=>[key(c.x,c.z),c.type]));
   for(const cell of areaPreview.cells){if(!visibleTile(cell.x,cell.z))continue;
    const t=planned.get(key(cell.x,cell.z)),valid=!!t||selected==='bulldoze'&&canPlace('bulldoze',cell.x,cell.z);
    const color=t==='road'?'rgba(237,204,103,.58)':valid?'rgba(72,222,159,.39)':'rgba(239,96,106,.23)';
@@ -732,7 +764,7 @@ function previewCells(start,end){if(mode==='area'){
 }
 function setPreview(start,end){
  const cells=previewCells(start,end);areaPreview={cells};
- const p=planBuild(selected,cells);$('selectionInfo').hidden=false;
+ const p=selected==='removeWater'?{plan:cells.filter(c=>canPlace('removeWater',c.x,c.z)),roads:0,cost:0}:planBuild(selected,cells);$('selectionInfo').hidden=false;
  $('selectionInfo').textContent=p.plan.length+' éléments'+(p.roads?' dont '+p.roads+' routes':'')+' · Coût : '+euros(p.cost);
 }
 function endPreview(){areaPreview=null;$('selectionInfo').hidden=true}
@@ -781,15 +813,20 @@ function onUp(e){
  if(!pointerStart||pointerStart.id!==e.pointerId){endPreview();return}
  const p=pointerStart;pointerStart=null;
  if(p.rotate||mode==='navigate'){endPreview();return}
+ const end=unproject(e.clientX,e.clientY),start=unproject(p.first.x,p.first.y);
+ if(!inGrid(end.x,end.z)||!inGrid(start.x,start.z)){
+  endPreview();toast('Placement hors de la carte.');return;
+ }
  if(mode==='single'&&!p.moved){
   const hit=(selected==='bulldoze'||selected==='inspect')?pickBuilding(e.clientX,e.clientY):null;
-  build(selected,[hit?{x:hit.x,z:hit.z}:unproject(e.clientX,e.clientY)]);
+  build(selected,[hit?{x:hit.x,z:hit.z}:end]);
  }else if(mode!=='single'&&p.moved){
-  build(selected,previewCells(unproject(p.first.x,p.first.y),unproject(e.clientX,e.clientY)));
- }else if(mode!=='single')build(selected,[unproject(e.clientX,e.clientY)]);
+  build(selected,previewCells(start,end));
+ }else if(mode!=='single')build(selected,[end]);
  endPreview();
 }
 function handleKeyboard(e){if(e.target.matches('input,textarea,select')||e.ctrlKey||e.metaKey)return;
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undoLast();return}
  if(e.key==='Escape'){if($('overlay').classList.contains('open')&&active){setOpen(false);return}selected='inspect';refreshControls();return}
  if($('overlay').classList.contains('open'))return;
  if(e.key===' '){e.preventDefault();paused=!paused;refreshControls();return}
@@ -806,7 +843,7 @@ function loop(now){requestAnimationFrame(loop);
  if(now-lastDraw>=34){draw();lastDraw=now}
 }
 function attachControls(){
- canvas.addEventListener('pointerdown',onDown);canvas.addEventListener('pointermove',onMove);canvas.addEventListener('pointerup',onUp);canvas.addEventListener('pointercancel',onUp);canvas.addEventListener('contextmenu',e=>e.preventDefault());
+ canvas.addEventListener('pointerdown',onDown);canvas.addEventListener('pointermove',onMove);canvas.addEventListener('pointerup',onUp);canvas.addEventListener('pointercancel',e=>{pointerPoints.delete(e.pointerId);pointerStart=null;endPreview()});canvas.addEventListener('contextmenu',e=>e.preventDefault());
  canvas.addEventListener('wheel',e=>{e.preventDefault();zoomBy(Math.exp(-e.deltaY*.0015),e.clientX,e.clientY)},{passive:false});
  $('zoomIn').onclick=()=>zoomBy(1.23);$('zoomOut').onclick=()=>zoomBy(1/1.23);
  $('rotate').onclick=()=>{yaw+=Math.PI/4;toast('Carte tournée de 45°')};
@@ -814,18 +851,19 @@ function attachControls(){
  $('viewToggle').onclick=()=>setView(view==='3d'?'2d':'3d');
  $('speedBtn').onclick=()=>{const rates=[1,2,4,8];speed=rates[(rates.indexOf(speed)+1)%rates.length];refreshControls();toast('Vitesse du temps : ×'+speed)};
  $('pauseBtn').onclick=()=>{paused=!paused;refreshControls()};
- $('worldsBtn').onclick=showWorldList;$('cityInfo').onclick=showServices;
+ $('undoBtn').onclick=undoLast;$('worldsBtn').onclick=showWorldList;$('cityInfo').onclick=showServices;
  $('modeSingle').onclick=()=>setMode('single');$('modeArea').onclick=()=>setMode('area');$('modeLine').onclick=()=>setMode('line');
  $('modeNavigate').onclick=()=>setMode('navigate');$('navBtn').onclick=()=>setMode(mode==='navigate'?'single':'navigate');
- $('exitBtn').onclick=()=>{persist();active=null;tiles=new Map();owned=new Set();cars=[];showWorldList()};
+ $('exitBtn').onclick=()=>{persist();active=null;tiles=new Map();owned=new Set();dryRiver=new Set();undoStack=[];$('undoBtn').disabled=true;cars=[];showWorldList()};
  $('minimap').addEventListener('pointerdown',e=>{if(!active)return;const rect=e.currentTarget.getBoundingClientRect();const x=clamp(Math.floor((e.clientX-rect.left)/rect.width*GRID),0,GRID-1),z=clamp(Math.floor((e.clientY-rect.top)/rect.height*GRID),0,GRID-1);const q=project(x,z);panX+=screenW*.51-q.x;panY+=screenH*.48-q.y});
- document.querySelectorAll('.category').forEach(b=>b.onclick=()=>{currentCategory=b.dataset.cat;const first=Object.entries(TYPES).find(([_,d])=>d.category===currentCategory);if(first)selected=first[0];if(TYPES[selected]?.zone||selected==='buyLand')mode='area';else if(isRoad(selected))mode='line';else mode='single';refreshControls()});
+ document.querySelectorAll('.category').forEach(b=>b.onclick=()=>{currentCategory=b.dataset.cat;const first=Object.entries(TYPES).find(([_,d])=>d.category===currentCategory);if(first)selected=first[0];if(TYPES[selected]?.zone||selected==='buyLand'||selected==='removeWater')mode='area';else if(isRoad(selected))mode='line';else mode='single';refreshControls()});
  $('collapseStatus').onclick=()=>{const el=$('statusContents');el.hidden=!el.hidden;$('collapseStatus').textContent=el.hidden?'+':'−'};
  window.addEventListener('keydown',handleKeyboard);window.addEventListener('resize',resize);
  document.addEventListener('visibilitychange',()=>{if(document.hidden)persist()});window.addEventListener('beforeunload',()=>persist());
  $('overlay').addEventListener('click',e=>{if(e.target===$('overlay')&&active)setOpen(false)});
 }
-function init(){worlds=readWorlds();resize();attachControls();refreshControls();showWorldList();requestAnimationFrame(loop)}
+function init(){worlds=readWorlds();resize();attachControls();refreshControls();showWorldList();requestAnimationFrame(loop);
+ setTimeout(()=>{const loading=$('loadingScreen');if(!loading)return;loading.classList.add('done');setTimeout(()=>loading.remove(),320)},700)}
 init();
 })();
 
