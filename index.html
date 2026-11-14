@@ -47,19 +47,9 @@
 
 @media(max-width:630px){.chosen{display:none}.tool-options{justify-content:space-between}.sidebar:has(#statusContents[hidden]){width:144px}.sidebar:has(#statusContents[hidden]) .side-heading{margin-bottom:0}}
 
-/* Ecran de chargement uniquement : les styles du jeu sont conservés. */
-#loadingScreen{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:linear-gradient(155deg,#1b3049,#0e1e33);transition:opacity .28s;pointer-events:auto}
-#loadingScreen.done{opacity:0;pointer-events:none}
-#loadingScreen .loading-content{text-align:center;width:min(320px,80vw);font-size:15px;color:#c5d5e5}
-#loadingScreen strong{display:block;font-size:32px;letter-spacing:2px;color:#fff;margin-bottom:10px}
-#loadingScreen strong em{font-style:normal;color:var(--accent)}
-#loadingScreen .loading-track{height:6px;margin-top:22px;border-radius:9px;background:#ffffff2d;overflow:hidden}
-#loadingScreen .loading-track::before{content:'';display:block;width:36%;height:100%;border-radius:9px;background:var(--accent);animation:loadSlide .75s ease-in-out infinite alternate}
-@keyframes loadSlide{from{transform:translateX(-100%)}to{transform:translateX(280%)}}
 </style>
 </head>
 <body>
-<div id="loadingScreen" role="status" aria-live="polite"><div class="loading-content"><strong>◆ NEXUS <em>CITY</em></strong>Chargement de la ville…<div class="loading-track"></div></div></div>
 <canvas id="world" aria-label="Carte de la ville" tabindex="0"></canvas>
 <header class="topbar" id="topbar">
   <div class="brand"><span class="brand-mark">◆</span><span><strong>NEXUS <em>CITY</em></strong><small id="worldTitle">Simulateur de villes</small></span></div>
@@ -95,7 +85,6 @@
   <button id="viewToggle" class="pill" title="Changer la vue (2/3)">🧊 Vue 3D</button>
   <button id="speedBtn" class="pill">⏩ ×1</button>
   <button id="pauseBtn" class="pill">⏸</button>
-  <button id="undoBtn" class="pill" title="Annuler la dernière construction (Ctrl+Z)" disabled>↶ Annuler</button>
   <button id="worldsBtn" class="pill">🌍 Changer de ville</button>
   <button id="exitBtn" class="pill">🚪 Quitter</button>
 </div>
@@ -109,9 +98,12 @@
     <button data-cat="housing" class="category active">🏠 Habitations</button>
     <button data-cat="economy" class="category">🏪 Économie</button>
     <button data-cat="roads" class="category">🛣️ Routes</button>
+    <button data-cat="transport" class="category">🚌 Transports</button>
     <button data-cat="services" class="category">🌳 Services</button>
     <button data-cat="electricity" class="category">⚡ Énergie</button>
     <button data-cat="water" class="category">💧 Eau</button>
+    <button data-cat="environment" class="category">♻️ Environnement</button>
+    <button data-cat="leisure" class="category">🎭 Loisirs</button>
     <button data-cat="zoning" class="category">▦ Zones</button>
     <button data-cat="management" class="category">💶 Gestion</button>
   </nav>
@@ -155,30 +147,145 @@ const TYPES = {
  dam:        {name:'Barrage hydroélectrique',icon:'🌊',category:'electricity',cost:45000000,upkeep:135000,power:10500,color:'#cad5d8',height:2.2,riverOnly:true},
  waterPlant: {name:'Station de traitement',icon:'🚰',category:'water',cost:13000000,upkeep:78000,water:7800,color:'#6eabd2',height:2.0},
  waterTower: {name:'Château d’eau',icon:'💧',category:'water',cost:2300000,upkeep:14500,water:1800,color:'#78b0cb',height:3.6},
- removeWater: {name:'Retirer l’eau',icon:'🏞️',category:'water',cost:0},
  zoneRes:    {name:'Zone résidentielle',icon:'🏡',category:'zoning',zone:'house',cost:360000},
  zoneMix:    {name:'Quartier mixte',icon:'🏘️',category:'zoning',zone:'mixed',cost:360000},
  zoneCom:    {name:'Zone commerciale',icon:'🛍️',category:'zoning',zone:'shop',cost:1050000},
  zoneInd:    {name:'Zone industrielle',icon:'🏗️',category:'zoning',zone:'factory',cost:5200000},
+ "cottage": {"name":"Petite maison","icon":"🏠","category":"housing","cost":180000,"upkeep":550,"height":1.1,"color":"#e5c6ab","people":2},
+ "duplex": {"name":"Maison jumelée","icon":"🏡","category":"housing","cost":650000,"upkeep":1900,"height":1.8,"color":"#dbab91","people":8},
+ "rowhouse": {"name":"Maisons de ville","icon":"🏘️","category":"housing","cost":900000,"upkeep":2600,"height":2.1,"color":"#d6b6a0","people":14},
+ "condo": {"name":"Copropriété","icon":"🏢","category":"housing","cost":3500000,"upkeep":12000,"height":4,"color":"#99b1d2","people":56},
+ "socialHousing": {"name":"Logements sociaux","icon":"🏬","category":"housing","cost":2100000,"upkeep":6500,"height":3.4,"color":"#9eacb5","people":75},
+ "ecoHome": {"name":"Écoquartier","icon":"🌿","category":"housing","cost":1850000,"upkeep":3400,"height":2,"color":"#a3c6a7","people":20,"green":4},
+ "villa": {"name":"Villa","icon":"🏡","category":"housing","cost":2300000,"upkeep":2800,"height":1.9,"color":"#e8d1a5","people":5,"happiness":2},
+ "studentHousing": {"name":"Résidence étudiante","icon":"🎓","category":"housing","cost":4200000,"upkeep":10500,"height":4.3,"color":"#9b9aca","people":100},
+ "skyscraper": {"name":"Gratte-ciel résidentiel","icon":"🌇","category":"housing","cost":18800000,"upkeep":48500,"height":11,"color":"#719fba","people":290},
+ "retirement": {"name":"Maison de retraite","icon":"👵","category":"housing","cost":5700000,"upkeep":32000,"height":2.3,"color":"#d7c7aa","people":48,"health":5,"jobs":16},
+ "cornerStore": {"name":"Épicerie","icon":"🏪","category":"economy","cost":480000,"upkeep":3100,"height":1.15,"color":"#de9f7b","jobs":8,"business":40000},
+ "supermarket": {"name":"Supermarché","icon":"🛒","category":"economy","cost":3600000,"upkeep":24000,"height":1.85,"color":"#d9a869","jobs":65,"business":270000},
+ "mall": {"name":"Centre commercial","icon":"🛍️","category":"economy","cost":15500000,"upkeep":98000,"height":4.1,"color":"#d19ca6","jobs":260,"business":1150000,"tourism":15},
+ "restaurant": {"name":"Restaurant","icon":"🍽️","category":"economy","cost":850000,"upkeep":6500,"height":1.5,"color":"#edb386","jobs":14,"business":78000,"tourism":4},
+ "hotel": {"name":"Hôtel","icon":"🏨","category":"economy","cost":12500000,"upkeep":87000,"height":5.1,"color":"#c6a47f","jobs":125,"business":690000,"tourism":120},
+ "officeTower": {"name":"Tour de bureaux","icon":"🏙️","category":"economy","cost":22000000,"upkeep":104000,"height":9.6,"color":"#6ba9c7","jobs":620,"business":1800000},
+ "techPark": {"name":"Parc technologique","icon":"💻","category":"economy","cost":18000000,"upkeep":65000,"height":3.2,"color":"#72b4ad","jobs":365,"business":850000,"education":3},
+ "warehouse": {"name":"Entrepôt","icon":"📦","category":"economy","cost":3500000,"upkeep":13000,"height":1.7,"color":"#a4a19a","jobs":44,"business":155000,"cargo":160},
+ "farm": {"name":"Ferme","icon":"🚜","category":"economy","cost":950000,"upkeep":4200,"height":1.05,"color":"#bd9c67","jobs":30,"business":85000,"pollution":1,"visual":"farm"},
+ "forestry": {"name":"Exploitation forestière","icon":"🪵","category":"economy","cost":2500000,"upkeep":11000,"height":1.4,"color":"#8a9572","jobs":65,"business":175000,"pollution":3,"visual":"farm"},
+ "oreMine": {"name":"Mine","icon":"⛏️","category":"economy","cost":7900000,"upkeep":44000,"height":1.6,"color":"#898789","jobs":190,"business":660000,"pollution":23,"noise":12},
+ "oilPump": {"name":"Extraction pétrolière","icon":"🛢️","category":"economy","cost":12500000,"upkeep":60000,"height":3.7,"color":"#737779","jobs":140,"business":860000,"pollution":32,"noise":18},
+ "greenIndustry": {"name":"Industrie propre","icon":"♻️","category":"economy","cost":10500000,"upkeep":52000,"height":2.2,"color":"#7eaa98","jobs":150,"business":500000,"pollution":3},
+ "logistics": {"name":"Plateforme logistique","icon":"🚚","category":"economy","cost":9900000,"upkeep":43000,"height":2.0,"color":"#9f9b9d","jobs":135,"business":505000,"cargo":380,"noise":10},
+ "commercialHigh": {"name":"Commerce haute densité","icon":"🏬","category":"economy","cost":6800000,"upkeep":35000,"height":4.2,"color":"#cb9b88","jobs":150,"business":520000},
+ "oneway": {"name":"Route à sens unique","icon":"➡️","category":"roads","cost":98000,"upkeep":510,"height":0.08,"color":"#525865","roadCap":14,"visual":"road"},
+ "dirtRoad": {"name":"Route de campagne","icon":"🛤️","category":"roads","cost":30000,"upkeep":150,"height":0.06,"color":"#94795c","roadCap":4,"visual":"road"},
+ "boulevard": {"name":"Boulevard arboré","icon":"🌳","category":"roads","cost":270000,"upkeep":1400,"height":0.08,"color":"#53666b","roadCap":28,"green":1,"visual":"road"},
+ "highway": {"name":"Autoroute","icon":"🛣️","category":"roads","cost":470000,"upkeep":2800,"height":0.1,"color":"#374754","roadCap":80,"noise":3,"visual":"road"},
+ "highwayRamp": {"name":"Bretelle autoroute","icon":"↗️","category":"roads","cost":255000,"upkeep":1300,"height":0.09,"color":"#4e5660","roadCap":36,"visual":"road"},
+ "pedRoad": {"name":"Rue piétonne","icon":"🚶","category":"roads","cost":105000,"upkeep":750,"height":0.07,"color":"#9f9a84","roadCap":6,"green":1,"visual":"road"},
+ "busLane": {"name":"Voie de bus","icon":"🚌","category":"roads","cost":215000,"upkeep":1200,"height":0.08,"color":"#715f62","roadCap":23,"transit":120,"visual":"road"},
+ "cycleLane": {"name":"Piste cyclable","icon":"🚲","category":"roads","cost":65000,"upkeep":400,"height":0.06,"color":"#478b7c","roadCap":6,"transit":95,"green":1,"visual":"road"},
+ "rail": {"name":"Voie ferrée","icon":"🚆","category":"roads","cost":380000,"upkeep":1650,"height":0.09,"color":"#646873","roadCap":3,"transit":160,"visual":"rail"},
+ "tramRail": {"name":"Rail de tramway","icon":"🚊","category":"roads","cost":265000,"upkeep":1300,"height":0.09,"color":"#676972","roadCap":7,"transit":135,"visual":"rail"},
+ "metroRail": {"name":"Tunnel métro","icon":"🚇","category":"roads","cost":690000,"upkeep":2400,"height":0.05,"color":"#655c7e","roadCap":2,"transit":240,"visual":"rail"},
+ "busStop": {"name":"Arrêt de bus","icon":"🚏","category":"transport","cost":180000,"upkeep":1800,"height":0.35,"color":"#e3c974","jobs":2,"transit":210,"visual":"station"},
+ "busDepot": {"name":"Dépôt de bus","icon":"🚌","category":"transport","cost":5700000,"upkeep":42000,"height":1.6,"color":"#d1b55b","jobs":58,"transit":1200,"visual":"station"},
+ "tramStop": {"name":"Arrêt de tram","icon":"🚊","category":"transport","cost":380000,"upkeep":3200,"height":0.4,"color":"#bbbbb4","jobs":4,"transit":280,"visual":"station"},
+ "tramDepot": {"name":"Dépôt de trams","icon":"🚋","category":"transport","cost":9300000,"upkeep":54000,"height":1.45,"color":"#aab5b9","jobs":85,"transit":1850,"visual":"station"},
+ "metroStation": {"name":"Station de métro","icon":"🚇","category":"transport","cost":12500000,"upkeep":65000,"height":1.2,"color":"#7caabb","jobs":46,"transit":2600,"visual":"station"},
+ "metroDepot": {"name":"Dépôt de métro","icon":"🚉","category":"transport","cost":24000000,"upkeep":125000,"height":1.8,"color":"#94b1b7","jobs":125,"transit":3700,"visual":"station"},
+ "railStation": {"name":"Gare voyageurs","icon":"🚆","category":"transport","cost":18000000,"upkeep":86000,"height":2.3,"color":"#afaa9c","jobs":90,"transit":3800,"tourism":22,"visual":"station"},
+ "cargoTerminal": {"name":"Gare de marchandises","icon":"🚂","category":"transport","cost":21000000,"upkeep":115000,"height":2.4,"color":"#8e979e","jobs":130,"cargo":1400,"transit":100,"noise":8,"visual":"station"},
+ "airport": {"name":"Aéroport","icon":"✈️","category":"transport","cost":68000000,"upkeep":320000,"height":2.7,"color":"#97b4c4","jobs":650,"transit":5000,"tourism":240,"noise":35,"visual":"station"},
+ "harbor": {"name":"Port","icon":"🚢","category":"transport","cost":37000000,"upkeep":170000,"height":2.3,"color":"#7ca2b1","jobs":270,"transit":2700,"tourism":140,"visual":"station"},
+ "ferry": {"name":"Embarcadère","icon":"⛴️","category":"transport","cost":4700000,"upkeep":22000,"height":1.0,"color":"#8cb7c5","jobs":22,"transit":900,"visual":"station"},
+ "taxi": {"name":"Station de taxis","icon":"🚕","category":"transport","cost":1200000,"upkeep":8500,"height":0.6,"color":"#e0c166","jobs":18,"transit":450,"visual":"station"},
+ "parking": {"name":"Parking","icon":"🅿️","category":"transport","cost":1650000,"upkeep":7200,"height":0.4,"color":"#949b9d","jobs":6,"roadCap":240,"visual":"station"},
+ "monorail": {"name":"Station monorail","icon":"🚝","category":"transport","cost":16500000,"upkeep":80000,"height":3.1,"color":"#b8cad5","jobs":70,"transit":2400,"visual":"station"},
+ "cableCar": {"name":"Téléphérique","icon":"🚠","category":"transport","cost":12300000,"upkeep":68000,"height":2.4,"color":"#abbcaf","jobs":40,"transit":1350,"tourism":30,"visual":"station"},
+ "kindergarten": {"name":"Crèche","icon":"🧸","category":"services","cost":1850000,"upkeep":12000,"height":1.15,"color":"#edd1a4","jobs":18,"service":2,"education":4},
+ "highSchool": {"name":"Collège et lycée","icon":"🎒","category":"services","cost":11800000,"upkeep":72000,"height":2.25,"color":"#cbad7c","jobs":78,"service":6,"education":14},
+ "university": {"name":"Université","icon":"🎓","category":"services","cost":39000000,"upkeep":210000,"height":4.4,"color":"#d7c6a6","jobs":210,"service":10,"education":40},
+ "library": {"name":"Bibliothèque","icon":"📚","category":"services","cost":5200000,"upkeep":31000,"height":2.0,"color":"#d7ba92","jobs":31,"service":3,"education":7},
+ "healthCenter": {"name":"Centre médical","icon":"🩺","category":"services","cost":4800000,"upkeep":25000,"height":1.6,"color":"#d1e4df","jobs":28,"service":4,"health":12},
+ "largeHospital": {"name":"Grand hôpital","icon":"🏥","category":"services","cost":42000000,"upkeep":240000,"height":5.1,"color":"#d1e0e5","jobs":290,"service":14,"health":60},
+ "pharmacy": {"name":"Pharmacie","icon":"💊","category":"services","cost":760000,"upkeep":4400,"height":1.3,"color":"#b9dbba","jobs":8,"health":3,"service":1},
+ "policeHQ": {"name":"Commissariat central","icon":"👮","category":"services","cost":11500000,"upkeep":75000,"height":2.7,"color":"#7f96bb","jobs":85,"police":3,"service":5},
+ "prison": {"name":"Prison","icon":"🔒","category":"services","cost":21500000,"upkeep":145000,"height":2.5,"color":"#979da3","jobs":155,"police":3},
+ "fireHQ": {"name":"Caserne principale","icon":"🚒","category":"services","cost":14500000,"upkeep":89000,"height":2.4,"color":"#c0786c","jobs":115,"fire":4,"service":5},
+ "cemetery": {"name":"Cimetière","icon":"🪦","category":"services","cost":2700000,"upkeep":11000,"height":0.2,"color":"#a7b29c","jobs":8,"health":3,"service":1,"visual":"green"},
+ "crematorium": {"name":"Crématorium","icon":"🕯️","category":"services","cost":4800000,"upkeep":26000,"height":1.75,"color":"#c6b5ad","jobs":20,"health":4},
+ "post": {"name":"Bureau de poste","icon":"📮","category":"services","cost":1600000,"upkeep":12000,"height":1.5,"color":"#e4bf74","jobs":26,"service":2},
+ "sportCenter": {"name":"Centre sportif","icon":"🏀","category":"services","cost":7400000,"upkeep":47000,"height":2.4,"color":"#d4bb91","jobs":45,"service":6,"recreation":14},
+ "playground": {"name":"Aire de jeux","icon":"🛝","category":"services","cost":580000,"upkeep":3400,"height":0.1,"color":"#8abf85","service":3,"recreation":8,"visual":"green"},
+ "plaza": {"name":"Place publique","icon":"⛲","category":"services","cost":860000,"upkeep":3900,"height":0.1,"color":"#d8c7a5","service":3,"recreation":9,"visual":"green"},
+ "cityGarden": {"name":"Jardin botanique","icon":"🌺","category":"services","cost":2600000,"upkeep":12500,"height":0.3,"color":"#78ad8a","jobs":8,"green":8,"service":4,"recreation":13,"visual":"green"},
+ "coalPlant": {"name":"Centrale charbon","icon":"🏭","category":"electricity","cost":14500000,"upkeep":160000,"height":3.3,"color":"#777d80","power":11500,"pollution":48,"noise":20},
+ "gasPlant": {"name":"Centrale à gaz","icon":"🔥","category":"electricity","cost":19000000,"upkeep":150000,"height":3.2,"color":"#9f9fa5","power":9200,"pollution":27},
+ "nuclear": {"name":"Centrale nucléaire","icon":"☢️","category":"electricity","cost":125000000,"upkeep":720000,"height":4.5,"color":"#d1dde2","power":75000,"pollution":2},
+ "geothermal": {"name":"Centrale géothermique","icon":"🌋","category":"electricity","cost":16000000,"upkeep":85000,"height":2.1,"color":"#b6aaa0","power":5500,"pollution":1},
+ "biomass": {"name":"Centrale biomasse","icon":"🌾","category":"electricity","cost":7500000,"upkeep":48000,"height":2.0,"color":"#aab999","power":2500,"pollution":7},
+ "windOffshore": {"name":"Éolienne offshore","icon":"🌬️","category":"electricity","cost":6300000,"upkeep":31000,"height":5.3,"color":"#e0e8ea","power":2200,"riverOnly":true},
+ "battery": {"name":"Stockage électrique","icon":"🔋","category":"electricity","cost":5500000,"upkeep":38000,"height":1.1,"color":"#829fb3","power":850},
+ "powerLine": {"name":"Ligne électrique","icon":"🔌","category":"electricity","cost":28000,"upkeep":190,"height":0.08,"color":"#a5a7b2","visual":"line"},
+ "substation": {"name":"Poste électrique","icon":"⚙️","category":"electricity","cost":1800000,"upkeep":12500,"height":0.8,"color":"#8a99aa","power":250},
+ "waterPump": {"name":"Pompage d’eau","icon":"🚰","category":"water","cost":3800000,"upkeep":27000,"height":1.8,"color":"#77b4c9","water":2700,"riverOnly":true},
+ "waterReservoir": {"name":"Réservoir d’eau","icon":"🫙","category":"water","cost":2900000,"upkeep":13500,"height":1.1,"color":"#83b5c6","water":1050},
+ "waterPipe": {"name":"Canalisation d’eau","icon":"🚿","category":"water","cost":24000,"upkeep":150,"height":0.06,"color":"#53a8d2","visual":"line"},
+ "sewagePipe": {"name":"Conduite eaux usées","icon":"🕳️","category":"water","cost":25000,"upkeep":170,"height":0.06,"color":"#928875","visual":"line"},
+ "sewagePlant": {"name":"Station d’épuration","icon":"♻️","category":"water","cost":17500000,"upkeep":108000,"height":2.2,"color":"#8cabb6","sewage":12500,"health":2},
+ "sewerOutlet": {"name":"Rejet eaux usées","icon":"🌊","category":"water","cost":2700000,"upkeep":20000,"height":0.85,"color":"#9ca7a8","sewage":1950,"pollution":18,"riverOnly":true},
+ "desalination": {"name":"Dessalement","icon":"🧂","category":"water","cost":24000000,"upkeep":180000,"height":2.0,"color":"#d2d6c9","water":12500,"riverOnly":true},
+ "waterTreatment": {"name":"Filtration d’eau","icon":"🧪","category":"water","cost":10700000,"upkeep":57000,"height":2.1,"color":"#84bbd1","water":4700,"health":3},
+ "landfill": {"name":"Décharge","icon":"🗑️","category":"environment","cost":2700000,"upkeep":36000,"height":0.65,"color":"#9e9474","jobs":22,"waste":3600,"pollution":24},
+ "recycling": {"name":"Centre de recyclage","icon":"♻️","category":"environment","cost":6400000,"upkeep":65000,"height":1.4,"color":"#8ab18c","jobs":46,"waste":7000,"green":4},
+ "incinerator": {"name":"Incinérateur","icon":"🔥","category":"environment","cost":17500000,"upkeep":148000,"height":2.8,"color":"#9e9690","jobs":95,"waste":14000,"power":900,"pollution":23},
+ "compost": {"name":"Compostage","icon":"🌱","category":"environment","cost":2700000,"upkeep":18500,"height":0.8,"color":"#92af78","jobs":19,"waste":2500,"green":2,"visual":"green"},
+ "wasteTransfer": {"name":"Centre de tri","icon":"🚛","category":"environment","cost":5200000,"upkeep":42000,"height":1.5,"color":"#a4aaa0","jobs":33,"waste":4900},
+ "forestReserve": {"name":"Réserve naturelle","icon":"🌲","category":"environment","cost":950000,"upkeep":3100,"height":0.12,"color":"#58936e","green":15,"recreation":6,"visual":"green"},
+ "noiseWall": {"name":"Mur antibruit","icon":"🔇","category":"environment","cost":110000,"upkeep":450,"height":0.15,"color":"#adbaaa","noiseReduction":4,"visual":"line"},
+ "ecoCenter": {"name":"Centre écologique","icon":"🌍","category":"environment","cost":8500000,"upkeep":48000,"height":2.1,"color":"#80aa97","jobs":38,"green":13,"education":5},
+ "museum": {"name":"Musée","icon":"🏛️","category":"leisure","cost":14500000,"upkeep":89000,"height":3.3,"color":"#d4c3ac","jobs":80,"tourism":85,"recreation":15},
+ "stadium": {"name":"Stade","icon":"🏟️","category":"leisure","cost":65000000,"upkeep":280000,"height":3.7,"color":"#b4b8ad","jobs":240,"tourism":200,"recreation":32,"noise":9,"visual":"sport"},
+ "concertHall": {"name":"Salle de concerts","icon":"🎼","category":"leisure","cost":24500000,"upkeep":135000,"height":3.9,"color":"#b6a6bb","jobs":120,"tourism":110,"recreation":27,"noise":8},
+ "cinema": {"name":"Cinéma","icon":"🎬","category":"leisure","cost":5200000,"upkeep":28000,"height":2.1,"color":"#c9a0a0","jobs":42,"tourism":25,"recreation":10},
+ "zoo": {"name":"Zoo","icon":"🦁","category":"leisure","cost":28000000,"upkeep":145000,"height":1.3,"color":"#91a780","jobs":135,"tourism":180,"recreation":22,"visual":"green"},
+ "aquarium": {"name":"Aquarium","icon":"🐠","category":"leisure","cost":22000000,"upkeep":115000,"height":3.5,"color":"#76b7c7","jobs":98,"tourism":120,"recreation":15},
+ "amusement": {"name":"Parc d’attractions","icon":"🎡","category":"leisure","cost":56000000,"upkeep":280000,"height":3.5,"color":"#b6a3c8","jobs":310,"tourism":330,"recreation":30,"visual":"sport"},
+ "beach": {"name":"Plage publique","icon":"🏖️","category":"leisure","cost":1300000,"upkeep":7800,"height":0.1,"color":"#d9c992","jobs":8,"tourism":38,"recreation":11,"visual":"green"},
+ "observation": {"name":"Tour panoramique","icon":"🗼","category":"leisure","cost":17000000,"upkeep":77000,"height":8.8,"color":"#a7c5d6","jobs":65,"tourism":90,"recreation":9},
+ "landmark": {"name":"Monument historique","icon":"🗿","category":"leisure","cost":9500000,"upkeep":32000,"height":3.8,"color":"#d0c1a9","tourism":75,"recreation":10},
+ "waterPark": {"name":"Piscine publique","icon":"🏊","category":"leisure","cost":11200000,"upkeep":58000,"height":1.9,"color":"#77b6cc","jobs":48,"tourism":25,"recreation":16,"visual":"sport"},
+ "zoneHighRes": {"name":"Zone résidentielle dense","icon":"🌇","category":"zoning","zone":"condo","cost":3500000},
+ "zoneOffice": {"name":"Zone de bureaux","icon":"🏢","category":"zoning","zone":"office","cost":2900000},
+ "zoneRetail": {"name":"Zone commerces denses","icon":"🏬","category":"zoning","zone":"commercialHigh","cost":6800000},
+ "zoneAgriculture": {"name":"Zone agricole","icon":"🚜","category":"zoning","zone":"farm","cost":950000},
+ "zoneGreen": {"name":"Zone écologique","icon":"🌿","category":"zoning","zone":"ecoHome","cost":1850000},
+ "zoneLogistics": {"name":"Zone logistique","icon":"📦","category":"zoning","zone":"warehouse","cost":3500000},
+ "zoneTourist": {"name":"Zone touristique","icon":"🏨","category":"zoning","zone":"hotel","cost":12500000},
+ "zoneLowRes": {"name":"Zone villas","icon":"🏡","category":"zoning","zone":"villa","cost":2300000},
+ "district": {"name":"Créer un quartier","icon":"🏘️","category":"management","cost":0},
+ "fillWater": {"name":"Gagner terrain sur eau","icon":"🏝️","category":"management","cost":185000},
+ "restoreWater": {"name":"Creuser un canal","icon":"💦","category":"management","cost":160000},
  buyLand:    {name:'Acheter du terrain',icon:'🗺️',category:'management',cost:LAND_BASE},
  bulldoze:   {name:'Démolir (+60 %)',icon:'🚧',category:'management',cost:0},
  inspect:    {name:'Inspecter',icon:'🔎',category:'management',cost:0}
 };
-const CATEGORIES = {housing:'Habitations',economy:'Économie',roads:'Routes',services:'Services',electricity:'Énergie',water:'Eau',zoning:'Zones',management:'Gestion'};
+const ORIGINAL_TYPES=new Set(['house','apartment','tower','luxury','shop','office','factory','road','avenue','roundabout','park','school','clinic','police','fire','solar','wind','power','dam','waterPlant','waterTower','zoneRes','zoneMix','zoneCom','zoneInd','buyLand','bulldoze','inspect']);
+const CATEGORIES = {housing:'Habitations',economy:'Économie',roads:'Routes',transport:'Transports',services:'Services',electricity:'Énergie',water:'Eau',environment:'Environnement',leisure:'Loisirs',zoning:'Zones',management:'Gestion'};
 const TAX_DEFAULT = {residential:6,commercial:7,industrial:8};
 const formatDate = month => new Intl.DateTimeFormat('fr-FR',{month:'long',year:'numeric'}).format(new Date(2026,month-1,1));
 let worlds=[], active=null, tiles=new Map(), owned=new Set(), currentCategory='housing', selected='house', mode='single';
 let view='3d', yaw=Math.PI/4, zoom=1, panX=0, panY=0, screenW=innerWidth, screenH=innerHeight;
 let areaPreview=null, pointerStart=null, pinchDistance=0, pinchCenter=null, pointerPoints=new Map(), hoveredCell=null, showParcels=false;
-let cars=[], drawCache=[], toastTimeout=0, paused=false, speed=1, framePrev=0, simAccum=0, saveAccum=0, lastDraw=0, lastMiniFrame=-1;
-let dryRiver=new Set(), undoStack=[];
+let cars=[], trains=[], drawCache=[], toastTimeout=0, paused=false, speed=1, framePrev=0, simAccum=0, saveAccum=0, lastDraw=0, lastMiniFrame=-1;
 const key=(x,z)=>x+','+z, at=(x,z)=>tiles.get(key(x,z));
-const isRoad=t=>t==='road'||t==='avenue'||t==='roundabout';
+const isRoad=t=>t==='road'||t==='avenue'||t==='roundabout'||TYPES[t]?.visual==='road';
+const isRail=t=>TYPES[t]?.visual==='rail';
 const rand2=(x,z,seed=0)=>{let n=Math.sin(x*127.1+z*311.7+seed*.017)*43758.5453123;return n-Math.floor(n)};
 const riverCenter=z=>Math.round(26+SHIFT+Math.sin((z-SHIFT)*.27+(active?.seed||1)*.00031)*2.6 +Math.sin((z-SHIFT)*.73)*.75);
 function terrain(x,z){
  if(x<0||z<0||x>=GRID||z>=GRID)return 'out';
- if(dryRiver.has(key(x,z)))return 'grass';
+ const override=active?.terrainEdits?.[key(x,z)];if(override==='river'||override==='grass')return override;
  const center=riverCenter(z),dist=Math.abs(x-center);
  if(dist<=1)return 'river';
  if(dist<=2)return 'shore';
@@ -189,7 +296,7 @@ function terrain(x,z){
 }
 function newWorld(name,startingMoney,needPower,needWater,unlimited){
  const id=String(Date.now())+'-'+Math.floor(Math.random()*1e8);
- const w={id,name:name.trim().slice(0,36)||'Nouvelle ville',seed:Math.floor(Math.random()*999999),gridSize:GRID,options:{startingMoney,needPower,needWater,unlimited},money:startingMoney,pop:0,month:1,tax:{...TAX_DEFAULT},exportPower:false,loans:[],tiles:[],owned:[],lastReport:{income:0,expense:0,profit:0,exportIncome:0,taxes:0,rent:0,business:0,maintenance:0,loanPayments:0},createdAt:Date.now(),updatedAt:Date.now(),filledWater:[]};
+ const w={id,name:name.trim().slice(0,36)||'Nouvelle ville',seed:Math.floor(Math.random()*999999),gridSize:GRID,options:{startingMoney,needPower,needWater,unlimited},money:startingMoney,pop:0,month:1,tax:{...TAX_DEFAULT},exportPower:false,loans:[],tiles:[],owned:[],terrainEdits:{},districts:[],policies:{},dayNight:false,weather:'sun',lastReport:{income:0,expense:0,profit:0,exportIncome:0,taxes:0,rent:0,business:0,maintenance:0,loanPayments:0},createdAt:Date.now(),updatedAt:Date.now()};
  const center=(GRID/2)|0;for(let z=center-5;z<=center+5;z++)for(let x=center-5;x<=center+5;x++)w.owned.push(key(x,z));
  for(let x=center-2;x<=center+2;x++)w.tiles.push({x,z:center+1,type:'road'});
  w.tiles.push({x:center,z:center,type:'townhall'});return w;
@@ -216,13 +323,12 @@ function readWorlds(){
  return [];
 }
 function writeWorlds(){try{localStorage.setItem(STORE,JSON.stringify(worlds));return true}catch{toast('Stockage indisponible : la sauvegarde automatique ne fonctionne pas.');return false}}
-function persist(show=false){if(!active)return;active.tiles=[...tiles.values()].map(({x,z,type})=>({x,z,type}));active.owned=[...owned];active.filledWater=[...dryRiver];active.gridSize=GRID;active.updatedAt=Date.now();writeWorlds();if(show)toast('Ville sauvegardée automatiquement sur cet appareil ✓')}
+function persist(show=false){if(!active)return;active.tiles=[...tiles.values()].map(({x,z,type})=>({x,z,type}));active.owned=[...owned];active.gridSize=GRID;active.updatedAt=Date.now();writeWorlds();if(show)toast('Ville sauvegardée automatiquement sur cet appareil ✓')}
 function ensureWorldMap(w){
  // Automatically migrate existing 34×34 saved maps without resetting finances or buildings.
  if(!w.gridSize||w.gridSize===OLD_GRID){
   w.tiles=(w.tiles||[]).map(t=>({...t,x:t.x+SHIFT,z:t.z+SHIFT}));
   if(Array.isArray(w.owned))w.owned=w.owned.map(k=>{const [x,z]=k.split(',').map(Number);return key(x+SHIFT,z+SHIFT)});
-  if(Array.isArray(w.filledWater))w.filledWater=w.filledWater.map(k=>{const [x,z]=k.split(',').map(Number);return key(x+SHIFT,z+SHIFT)});
   w.gridSize=GRID;
  }
  if(!Array.isArray(w.owned)||w.owned.length===0){
@@ -238,10 +344,11 @@ function activate(w){
  active.money=Number.isFinite(w.money)?w.money:active.options.startingMoney;
  active.pop=Math.max(0,Number(w.pop)||0);active.month=Math.max(1,Math.floor(Number(w.month)||1));
  tiles=new Map();for(const t of w.tiles||[])if((t.type==='townhall'||TYPES[t.type])&&Number.isInteger(t.x)&&Number.isInteger(t.z)&&inGrid(t.x,t.z))tiles.set(key(t.x,t.z),{type:t.type,x:t.x,z:t.z});
- owned=new Set(w.owned);dryRiver=new Set(w.filledWater||[]);undoStack=[];active.tax={...TAX_DEFAULT,...(active.tax||{})};active.loans=active.loans||[];
+ owned=new Set(w.owned);active.tax={...TAX_DEFAULT,...(active.tax||{})};active.loans=active.loans||[];
  active.lastReport=active.lastReport||{income:0,expense:0,profit:0};
- view='3d';yaw=Math.PI/4;zoom=defaultZoom();panX=0;panY=0;paused=false;speed=1;simAccum=0;saveAccum=0;cars=[];
- selected='house';currentCategory='housing';mode='single';showParcels=false;$('undoBtn').disabled=true;setOpen(false);
+ active.terrainEdits=active.terrainEdits||{};active.districts=active.districts||[];active.policies=active.policies||{};active.weather=active.weather||'sun';
+ view='3d';yaw=Math.PI/4;zoom=defaultZoom();panX=0;panY=0;paused=false;speed=1;simAccum=0;saveAccum=0;cars=[];trains=[];
+ selected='house';currentCategory='housing';mode='single';showParcels=false;setOpen(false);
  if(screenW<630){$('statusContents').hidden=true;$('collapseStatus').textContent='+'}else{$('statusContents').hidden=false;$('collapseStatus').textContent='−'}
  refreshControls();refreshUI();persist();toast('Bienvenue à '+w.name+' !');
 }
@@ -250,39 +357,82 @@ function inGrid(x,z){return Number.isInteger(x)&&Number.isInteger(z)&&x>=0&&z>=0
 function landCost(x,z){return terrain(x,z)==='river'?50000:terrain(x,z)==='forest'?80000:LAND_BASE}
 function allStats(){
  let housing=0,jobs=0,power=0,water=0,upkeep=0,roadCapacity=0,services=0,shops=0,industries=0,offices=0,resCount=0,connectedHousing=0,buildings=0;
- let parks=0,schools=0,clinics=0,police=0,fire=0,cleanEnergy=0,thermal=0;
- let residential=0,commercial=0;
+ let parks=0,schools=0,clinics=0,police=0,fire=0,cleanEnergy=0,thermal=0,commercial=0;
+ let sewage=450,waste=450,transitCapacity=0,tourism=0,recreation=0,green=0,pollution=0,noise=0;
+ let securityBoost=0,healthBoost=0,educationBoost=0,fireBoost=0,noiseReduction=0,businessBase=0,industryJobs=0;
  for(const t of tiles.values()){
   const d=TYPES[t.type];if(!d)continue;buildings++;
-  housing+=d.people||0;jobs+=d.jobs||0;power+=d.power||0;water+=d.water||0;upkeep+=d.upkeep||0;roadCapacity+=d.roadCap||0;services+=d.service||0;
-  if(d.people){resCount++;residential++;if(adjacentRoad(t.x,t.z))connectedHousing+=d.people}
-  if(t.type==='shop')shops++;if(t.type==='factory')industries++;if(t.type==='office')offices++;
-  if(t.type==='shop'||t.type==='office')commercial++;
-  if(t.type==='park')parks++;if(t.type==='school')schools++;if(t.type==='clinic')clinics++;
-  if(t.type==='police')police++;if(t.type==='fire')fire++;
-  if(['solar','wind','dam'].includes(t.type))cleanEnergy+=d.power||0;
-  if(t.type==='power')thermal++;
+  housing+=d.people||0;jobs+=d.jobs||0;power+=d.power||0;water+=d.water||0;upkeep+=d.upkeep||0;
+  roadCapacity+=d.roadCap||0;services+=d.service||0;
+  sewage+=d.sewage||0;waste+=d.waste||0;transitCapacity+=d.transit||0;
+  tourism+=d.tourism||0;recreation+=d.recreation||0;green+=d.green||0;
+  pollution+=d.pollution||0;noise+=d.noise||0;noiseReduction+=d.noiseReduction||0;
+  securityBoost+=d.police||0;healthBoost+=d.health||0;educationBoost+=d.education||0;fireBoost+=d.fire||0;
+  businessBase+=d.business||0;
+  if(d.people){resCount++;if(adjacentRoad(t.x,t.z))connectedHousing+=d.people}
+  if(d.category==='economy'){
+   if(['office','officeTower','techPark'].includes(t.type))offices++;
+   else if(['factory','farm','forestry','oreMine','oilPump','greenIndustry','logistics','warehouse'].includes(t.type)){industries++;industryJobs+=d.jobs||0}
+   else {shops++;commercial++}
+  }
+  if(['park','cityGarden','plaza','playground','forestReserve'].includes(t.type))parks++;
+  if(['school','highSchool','university','kindergarten','library'].includes(t.type))schools++;
+  if(['clinic','largeHospital','healthCenter','pharmacy'].includes(t.type))clinics++;
+  if(['police','policeHQ','prison'].includes(t.type))police++;
+  if(['fire','fireHQ'].includes(t.type))fire++;
+  if(['solar','wind','windOffshore','dam','geothermal','nuclear','biomass'].includes(t.type))cleanEnergy+=d.power||0;
+  if(['power','coalPlant','gasPlant'].includes(t.type))thermal++;
  }
+ const policies=active?.policies||{};
+ const districtBonuses={tourism:0,eco:0,industry:0,residential:0};
+ for(const district of active?.districts||[]){
+  if(!district||!district.policy||!(district.policy in districtBonuses))continue;
+  let buildingsIn=0;
+  for(const t of tiles.values())if(t.x>=district.minX&&t.x<=district.maxX&&t.z>=district.minZ&&t.z<=district.maxZ)buildingsIn++;
+  districtBonuses[district.policy]+=buildingsIn;
+ }
+ tourism+=districtBonuses.tourism*8;
+ green+=districtBonuses.eco*3;
+ pollution=Math.max(0,pollution-districtBonuses.eco*.75);
+ industryJobs+=districtBonuses.industry*2;
+ recreation+=districtBonuses.residential*1.5;
+ if(policies.greenEnergy)pollution*=.72;
+ if(policies.noiseProtection)noise*=.6;
+ if(policies.publicTransit)transitCapacity*=1.5;
+ if(policies.cycleCity)transitCapacity+=400;
+ if(policies.educationPriority)educationBoost=educationBoost*1.4+3;
  const pop=active?.pop||0;
  const powerNeed=pop*2+shops*80+industries*900+offices*160+Math.max(0,buildings-resCount)*10;
  const waterNeed=pop*3+shops*50+industries*450+offices*100+services*30;
+ const sewageNeed=pop*2.2+industries*235+shops*35;
+ const wasteNeed=pop*.95+industries*135+shops*32;
+ const sewageRatio=sewageNeed?clamp(sewage/sewageNeed,0,1):1;
+ const wasteRatio=wasteNeed?clamp(waste/(wasteNeed*(policies.recycling?.8:1)),0,1):1;
  const pRatio=active?.options.needPower===false?1:powerNeed?clamp(power/powerNeed,0,1):1;
  const wRatio=active?.options.needWater===false?1:waterNeed?clamp(water/waterNeed,0,1):1;
  const roadRatio=housing?connectedHousing/housing:1;
  const jobRatio=pop?clamp(jobs/Math.max(1,pop*.48),0,1):1;
- const serviceScore=pop?clamp(services/Math.max(1,pop/50),0,1):0.55;
- const congestion=roadCapacity?clamp((Math.min(pop,jobs*2)*.9 + Math.max(0,industries*45))/roadCapacity,0,3):0;
- const security=clamp(Math.round(46+police*40+fire*15-Math.max(0,pop-160)/15-industries*3),5,100);
- const health=clamp(Math.round(50+clinics*48+parks*3-Math.max(0,pop-120)/18-thermal*5),5,100);
- const education=clamp(Math.round(42+schools*53-Math.max(0,pop-100)/15),5,100);
- const greenScore=clamp(Math.round(78+parks*4+Math.min(10,cleanEnergy/900)-industries*16-thermal*18-Math.max(0,congestion-1)*9),5,100);
- const social=clamp(Math.round(45+Math.min(15,parks*3)+Math.min(15,schools*8)+Math.min(15,clinics*6)),5,100);
+ const serviceScore=pop?clamp((services+recreation*.27)/Math.max(1,pop/50),0,1):.55;
+ const trafficDemand=Math.min(pop,jobs*2)*.9+Math.max(0,industries*45);
+ const effectiveRoadCapacity=roadCapacity+transitCapacity*.55;
+ const congestion=effectiveRoadCapacity?clamp(trafficDemand/effectiveRoadCapacity,0,3):0;
+ const security=clamp(Math.round(46+police*40+fire*15+securityBoost*20+fireBoost*7-Math.max(0,pop-160)/15-industries*2),5,100);
+ const health=clamp(Math.round(50+clinics*41+healthBoost*4+parks*3-Math.max(0,pop-120)/18-thermal*5-(1-sewageRatio)*28-(1-wasteRatio)*25-pollution*.18),5,100);
+ const education=clamp(Math.round(42+schools*30+educationBoost*3-Math.max(0,pop-100)/24),5,100);
+ const greenScore=clamp(Math.round(78+parks*4+green*.7+Math.min(10,cleanEnergy/900)-industries*4-thermal*11-pollution*.45-Math.max(0,noise-noiseReduction)*.15-Math.max(0,congestion-1)*9),5,100);
+ const social=clamp(Math.round(45+Math.min(15,parks*3)+Math.min(18,schools*8)+Math.min(15,clinics*6)+recreation*.65),5,100);
  const transport=clamp(Math.round(100*Math.min(1,roadRatio)*Math.max(.2,1-Math.max(0,congestion-.65)*.23)),0,100);
  const economy=clamp(Math.round(100*jobRatio),0,100);
- const quality=.13*pRatio*100+.11*wRatio*100+.13*transport+.15*economy+.11*serviceScore*100+.11*security+.10*health+.07*education+.06*greenScore+.03*social;
+ const quality=.13*pRatio*100+.11*wRatio*100+.13*transport+.15*economy+.10*serviceScore*100+.10*security+.09*health+.07*education+.07*greenScore+.05*social;
  const taxPenalty=Math.max(0,(active?.tax.residential||6)-9)*1.5;
- const happiness=clamp(Math.round(quality-taxPenalty),5,100);
- return {housing,jobs,power,water,upkeep,roadCapacity,services,shops,industries,offices,connectedHousing,powerNeed,waterNeed,pRatio,wRatio,roadRatio,jobRatio,serviceScore,congestion,happiness,buildings,security,health,education,greenScore,social,transport,economy,parks,schools,clinics,police,fire};
+ const happiness=clamp(Math.round(quality-taxPenalty-(1-sewageRatio)*16-(1-wasteRatio)*14+(policies.publicTransit?3:0)+(policies.educationPriority?2:0)+(policies.cycleCity?2:0)+(policies.taxRelief?4:0)),5,100);
+ const landValue=clamp(Math.round(50+greenScore*.27+social*.15+tourism*.022-pollution*.36),1,100);
+ const residentialDemand=clamp(Math.round(55+jobRatio*30+happiness*.3-(housing-pop)*.1),0,100);
+ const commercialDemand=clamp(Math.round(35+Math.min(50,pop/16)+tourism*.02-shops*5),0,100);
+ const industrialDemand=clamp(Math.round(50+Math.min(40,pop/28)-industryJobs*.035),0,100);
+ const policyCosts=Object.entries(policies).filter(([k,v])=>v).reduce((total,[k])=>total+({recycling:18000,publicTransit:90000,educationPriority:110000,greenEnergy:60000,noiseProtection:38000,cycleCity:42000,taxRelief:10000}[k]||0),0);
+ return {housing,jobs,power,water,upkeep,roadCapacity,services,shops,industries,offices,connectedHousing,powerNeed,waterNeed,pRatio,wRatio,roadRatio,jobRatio,serviceScore,congestion,happiness,buildings,security,health,education,greenScore,social,transport,economy,parks,schools,clinics,police,fire,
+  sewage,sewageNeed,sewageRatio,waste,wasteNeed,wasteRatio,transitCapacity,tourism,recreation,green,pollution,noise,landValue,residentialDemand,commercialDemand,industrialDemand,businessBase,policyCosts,industryJobs};
 }
 function adjacentRoad(x,z){return [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>isRoad(at(x+dx,z+dz)?.type))}
 function noMoney(cost){return !active.options.unlimited && active.money<cost}
@@ -291,10 +441,12 @@ function canPlace(type,x,z){
  if(type==='inspect')return true;
  if(type==='bulldoze')return !!at(x,z)&&at(x,z).type!=='townhall';
  if(type==='buyLand')return !owned.has(key(x,z));
- if(type==='removeWater')return terrain(x,z)==='river' && !at(x,z) && owned.has(key(x,z));
+ if(type==='district')return owned.has(key(x,z));
+ if(type==='fillWater')return owned.has(key(x,z))&&terrain(x,z)==='river'&&!at(x,z);
+ if(type==='restoreWater')return owned.has(key(x,z))&&terrain(x,z)!=='river'&&!at(x,z);
  if(!owned.has(key(x,z))||at(x,z))return false;
  const d=TYPES[type];if(!d)return false;
- const land=terrain(x,z);return d.riverOnly?land==='river':isRoad(type)||land!=='river';
+ const land=terrain(x,z);return d.riverOnly?land==='river':isRoad(type)||d.visual==='line'||land!=='river';
 }
 function resolveZone(type,i){if(type==='zoneRes')return i%9===0?'apartment':'house';if(type==='zoneMix')return i%7===0?'shop':i%5===0?'apartment':'house';return TYPES[type]?.zone||type}
 function placementCost(type,x,z){return type==='buyLand'?landCost(x,z):TYPES[type].cost+(isRoad(type)&&terrain(x,z)==='river'?220000:0)}
@@ -320,6 +472,8 @@ function roadRoute(starts,blocked){
  return path;
 }
 function planBuild(type,cells){
+ if(type==='district'){const plan=cells.filter(c=>canPlace(type,c.x,c.z)).map(c=>({...c,type}));return {plan,cost:0,roads:0}}
+ if(type==='fillWater'||type==='restoreWater'){const plan=cells.filter(c=>canPlace(type,c.x,c.z)).map(c=>({...c,type}));return {plan,cost:plan.length*TYPES[type].cost,roads:0}}
  if(type==='buyLand'){
   const unique=new Set();const plan=[];let cost=0;
   for(const c of cells){const k=key(c.x,c.z);if(!unique.has(k)&&canPlace(type,c.x,c.z)){unique.add(k);plan.push({...c,type});cost+=landCost(c.x,c.z)}}
@@ -332,7 +486,7 @@ function planBuild(type,cells){
   for(const c of candidates){const t=resolveZone(type,0);if(!canPlace(t,c.x,c.z))continue;plan.push({...c,type:t});cost+=placementCost(t,c.x,c.z)}
   return {plan,cost,roads:0};
  }
- // Toutes les zones (résidentielle, mixte, commerciale, industrielle) incluent des rues.
+ // Residential zones include streets and, when possible, a road back to the existing network.
  const valid=candidates.filter(c=>canPlace(resolveZone(type,0),c.x,c.z));
  if(!valid.length)return {plan:[],cost:0,roads:0};
  const minX=Math.min(...valid.map(c=>c.x)),maxX=Math.max(...valid.map(c=>c.x));
@@ -360,34 +514,31 @@ function planBuild(type,cells){
  const plan=[...houseCells,...streets];
  return {plan,cost:plan.reduce((sum,c)=>sum+placementCost(c.type,c.x,c.z),0),roads:streets.length};
 }
-function rememberUndo(){
- undoStack.push({money:active.money,pop:active.pop,tiles:[...tiles.values()].map(t=>({...t})),owned:[...owned],filledWater:[...dryRiver]});
- if(undoStack.length>30)undoStack.shift();$('undoBtn').disabled=false;
-}
-function undoLast(){
- if(!active||!undoStack.length){toast('Rien à annuler.');return}
- const prev=undoStack.pop();active.money=prev.money;active.pop=prev.pop;
- tiles=new Map(prev.tiles.map(t=>[key(t.x,t.z),t]));owned=new Set(prev.owned);dryRiver=new Set(prev.filledWater);
- cars=[];persist();refreshUI();$('undoBtn').disabled=undoStack.length===0;toast('Dernière construction annulée.');
-}
 function build(type,cells){if(!active)return;
- if(type==='inspect'){const c=cells[0],t=c&&at(c.x,c.z);if(t)inspectTile(t);else if(c&&owned.has(key(c.x,c.z)))toast('Terrain acheté et libre.');else toast('Terrain disponible à l’achat.');return}
- if(type==='removeWater'){
-  const targets=[...new Set(cells.filter(c=>canPlace('removeWater',c.x,c.z)).map(c=>key(c.x,c.z)))];
-  if(!targets.length){toast('Sélectionne une case de rivière achetée et libre.');return}
-  rememberUndo();for(const k of targets)dryRiver.add(k);persist();refreshUI();toast(targets.length+' case(s) d’eau retirée(s).');return;
+ if(type==='district'){
+  const valid=cells.filter(c=>canPlace(type,c.x,c.z));if(!valid.length){toast('Sélectionne une partie de ton terrain.');return}
+  if(active.districts.length>=16){toast('Maximum 16 quartiers.');return}
+  const district={id:Date.now(),name:'Quartier '+(active.districts.length+1),minX:Math.min(...valid.map(c=>c.x)),maxX:Math.max(...valid.map(c=>c.x)),minZ:Math.min(...valid.map(c=>c.z)),maxZ:Math.max(...valid.map(c=>c.z)),policy:'none'};
+  active.districts.push(district);persist();showDistricts();toast('Nouveau quartier créé.');return;
  }
+ if(type==='fillWater'||type==='restoreWater'){
+  const {plan,cost}=planBuild(type,cells);if(!plan.length){toast('Choisis des cases libres de ton terrain.');return}
+  if(noMoney(cost)){toast('Budget insuffisant : '+euros(cost));return}
+  for(const c of plan)active.terrainEdits[key(c.x,c.z)]=type==='fillWater'?'grass':'river';
+  if(!active.options.unlimited)active.money-=cost;
+  persist();refreshUI();toast(plan.length+' case(s) de terrain modifiée(s) · '+euros(cost));return;
+ }
+ if(type==='inspect'){const c=cells[0],t=c&&at(c.x,c.z);if(t)inspectTile(t);else if(c&&owned.has(key(c.x,c.z)))toast('Terrain acheté et libre.');else toast('Terrain disponible à l’achat.');return}
  if(type==='bulldoze'){
-  let refund=0;const seen=new Set(),targets=[];for(const c of cells){const k=key(c.x,c.z),t=at(c.x,c.z);if(seen.has(k)||!t||t.type==='townhall')continue;seen.add(k);
-   refund+=Math.round(TYPES[t.type].cost*.6);targets.push(k);
+  let refund=0,n=0;const seen=new Set();for(const c of cells){const k=key(c.x,c.z),t=at(c.x,c.z);if(seen.has(k)||!t||t.type==='townhall')continue;seen.add(k);
+   refund+=Math.round(TYPES[t.type].cost*.6);tiles.delete(k);n++;
   }
-  if(targets.length){rememberUndo();for(const k of targets)tiles.delete(k);if(!active.options.unlimited)active.money+=refund;active.pop=Math.min(active.pop,allStats().housing);persist();refreshUI();toast(targets.length+' construction(s) démolie(s) · +'+euros(refund)+' (60 % du prix initial)')}
+  if(n){if(!active.options.unlimited)active.money+=refund;active.pop=Math.min(active.pop,allStats().housing);persist();refreshUI();toast(n+' construction(s) démolie(s) · +'+euros(refund)+' (60 % du prix initial)')}
   else toast('Aucune construction à démolir à cet emplacement.');return;
  }
  const {plan,cost,roads}=planBuild(type,cells);
  if(!plan.length){toast(type==='dam'?'Le barrage doit être construit sur une rivière achetée.':type==='buyLand'?'Ce terrain est déjà à toi.':'Terrain non acheté, occupé ou non constructible.');return}
  if(noMoney(cost)){toast('Budget insuffisant : '+euros(cost)+' nécessaires.');return}
- rememberUndo();
  for(const c of plan){if(type==='buyLand')owned.add(key(c.x,c.z));else tiles.set(key(c.x,c.z),c)}
  if(!active.options.unlimited)active.money-=cost;
  persist();refreshUI();toast(type==='buyLand'?plan.length+' terrain(s) acheté(s) · '+euros(cost):plan.length+' constructions ('+roads+' routes automatiques) · '+euros(cost));
@@ -401,19 +552,21 @@ function monthEnd(){if(!active)return;
  active.pop=clamp(active.pop+delta,0,s.housing);s=allStats();
  const rent=Math.round(active.pop*705*(.75+.25*s.happiness/100));
  const residentialTaxes=Math.round(active.pop*3200*active.tax.residential/100);
- const businessTaxes=Math.round(((s.shops*105000+s.offices*235000)*active.tax.commercial/100+s.industries*390000*active.tax.industrial/100)*(.55+.45*s.transport/100)*(.55+.45*s.happiness/100));
+ const commercialShare=Math.max(0,s.businessBase-s.industryJobs*4300);
+ const businessTaxes=Math.round((commercialShare*active.tax.commercial/100+(s.businessBase-commercialShare)*active.tax.industrial/100)*(.55+.45*s.transport/100)*(.55+.45*s.happiness/100)*(active.policies?.taxRelief?.86:1));
  const energySurplus=Math.max(0,s.power-s.powerNeed);
  const exportIncome=active.exportPower?Math.round(energySurplus*83):0;
  const taxes=residentialTaxes+businessTaxes;
- const income=rent+taxes+exportIncome;
- const maintenance=s.upkeep;
+ const touristIncome=Math.round(s.tourism*1400*(s.transport/100*.5+.5));
+ const income=rent+taxes+exportIncome+touristIncome;
+ const maintenance=s.upkeep+s.policyCosts;
  let loanPayments=0;
  for(const loan of active.loans){if(loan.monthsLeft<=0)continue;const interest=loan.remaining*loan.rate/12;const payment=Math.min(loan.remaining+interest,loan.payment);loan.remaining=Math.max(0,loan.remaining+interest-payment);loan.monthsLeft--;loanPayments+=payment}
  active.loans=active.loans.filter(l=>l.monthsLeft>0&&l.remaining>.01);
  const expense=Math.round(maintenance+loanPayments);
  const profit=Math.round(income-expense);
  if(!active.options.unlimited)active.money+=profit;
- active.lastReport={income,expense,profit,rent,taxes,business:businessTaxes,exportIncome,maintenance,loanPayments:Math.round(loanPayments),electricitySurplus:energySurplus};
+ active.lastReport={income,expense,profit,rent,taxes,touristIncome,business:businessTaxes,exportIncome,maintenance,loanPayments:Math.round(loanPayments),electricitySurplus:energySurplus};
  active.month++;persist();refreshUI();toast((profit>=0?'+':'')+euros(profit)+' ce mois-ci'+(delta>0?' · '+delta+' nouveaux habitants':''));
 }
 function loanPayment(principal,years){const n=years*12,r=.035/12;return principal*r/(1-Math.pow(1+r,-n))}
@@ -465,10 +618,10 @@ function refreshControls(){
  $('viewToggle').textContent=view==='3d'?'🧊 Vue 3D':'🗺️ Vue 2D';$('speedBtn').textContent='⏩ ×'+speed;$('pauseBtn').textContent=paused?'▶':'⏸';
  const objects=Object.entries(TYPES).filter(([_,d])=>d.category===currentCategory);
  const extras=currentCategory==='management'?[
-  ['budget','💶','Budget'],['loans','🏦','Prêts'],['taxes','⚖️','Impôts'],['export','⚡','Export énergie'],['save','💾','Sauvegarder']
+  ['budget','💶','Budget'],['loans','🏦','Prêts'],['taxes','⚖️','Impôts'],['policies','📋','Politiques'],['districts','🏘️','Quartiers'],['cityStats','📊','Statistiques'],['weather','🌤️','Météo'],['export','⚡','Export énergie'],['save','💾','Sauvegarder']
  ]:[];
  $('buildItems').innerHTML=objects.map(([id,d])=>`<button class="build-item ${selected===id?'active':''}" data-type="${id}" title="${esc(d.name)}"><span class="emoji">${d.icon}</span><span><b>${esc(d.name)}</b><small>${d.cost?euros(d.cost):'Action'}</small></span></button>`).join('')+extras.map(([id,ic,n])=>`<button class="build-item" data-action="${id}"><span class="emoji">${ic}</span><span><b>${n}</b><small>Ouvrir</small></span></button>`).join('');
- $('buildItems').querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{selected=b.dataset.type;if(TYPES[selected].zone||selected==='buyLand'||selected==='removeWater'){mode='area'}else if(isRoad(selected)){mode='line'}else{mode='single'}refreshControls()});
+ $('buildItems').querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{selected=b.dataset.type;if(TYPES[selected].zone||selected==='buyLand'||selected==='district'||selected==='fillWater'||selected==='restoreWater'){mode='area'}else if(isRoad(selected)||TYPES[selected].visual==='line'){mode='line'}else{mode='single'}refreshControls()});
  $('buildItems').querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>openAction(b.dataset.action));
  $('chosenTool').textContent=(TYPES[selected]?.icon||'👆')+' '+(TYPES[selected]?.name||'');
  $('helpLine').textContent=mode==='navigate'?'🤚 Déplace la carte avec un doigt, pince pour zoomer.':mode==='area'?'Trace ta zone • Pour déplacer la carte, active 🤚 Déplacer ou utilise deux doigts.':mode==='line'?'Trace ta route • 🤚 Déplacer pour naviguer.':'Toucher : construire • Glisser : déplacer • 2 doigts : zoom et déplacement';
@@ -486,15 +639,15 @@ function refreshUI(){if(!active)return;
  $('jobs').textContent=fmt(s.jobs)+' / '+fmt(Math.ceil(active.pop*.48));
  $('landCount').textContent=fmt(owned.size)+' cases';$('air').textContent=s.greenScore+' %';bar('airBar',s.greenScore/100);
  $('security').textContent=s.security+' %';bar('securityBar',s.security/100);
- $('cityMessage').textContent=active.options.needPower&&s.pRatio<1?'⚡ Construis une centrale, une éolienne ou un barrage.':active.options.needWater&&s.wRatio<1?'💧 La ville manque d’eau potable.':s.congestion>1.3?'🚗 Embouteillages ! Ajoute des avenues et des routes.':s.roadRatio<.95?'🛣️ Raccorde les habitations aux routes.':s.housing===0?'🏠 Commence par construire des logements.':'✅ La ville se développe. Consulte le budget chaque mois.';
+ $('cityMessage').textContent=s.sewageRatio<.75?'🕳️ Les eaux usées débordent : construis une station d’épuration.':s.wasteRatio<.75?'🗑️ Les déchets s’accumulent : ajoute le recyclage ou une décharge.':active.options.needPower&&s.pRatio<1?'⚡ Construis une centrale, une éolienne ou un barrage.':active.options.needWater&&s.wRatio<1?'💧 La ville manque d’eau potable.':s.congestion>1.3?'🚗 Embouteillages ! Ajoute des avenues et des routes.':s.roadRatio<.95?'🛣️ Raccorde les habitations aux routes.':s.housing===0?'🏠 Commence par construire des logements.':'✅ La ville se développe. Consulte le budget chaque mois.';
  refreshControls();
 }
-function openAction(id){if(!active)return;({budget:showBudget,loans:showLoans,taxes:showTaxes,export:showExport,save:()=>persist(true),worlds:showWorldList,services:showServices})[id]?.()}
+function openAction(id){if(!active)return;({budget:showBudget,loans:showLoans,taxes:showTaxes,export:showExport,save:()=>persist(true),worlds:showWorldList,services:showServices,cityStats:showServices,policies:showPolicies,districts:showDistricts,weather:showWeather})[id]?.()}
 function line(label,value){return `<div class="listrow"><span>${label}</span><b>${value}</b></div>`}
 function showBudget(){const s=allStats(),r=active.lastReport;
  modal('💶 Budget et finances',`<div class="summary-grid"><div class="summary"><span>Trésorerie</span><strong>${active.options.unlimited?'∞':euros(active.money)}</strong></div><div class="summary"><span>Recettes / mois</span><strong>${euros(r.income||0)}</strong></div><div class="summary"><span>Solde / mois</span><strong>${r.profit>=0?'+':''}${euros(r.profit||0)}</strong></div></div>
- <h3>Recettes du dernier mois</h3>${line('Loyers des logements municipaux',euros(r.rent||0))}${line('Impôts et taxes',euros(r.taxes||0))}${line('Exportation d’électricité',euros(r.exportIncome||0))}
- <h3>Dépenses du dernier mois</h3>${line('Entretien bâtiments et infrastructures',euros(r.maintenance||0))}${line('Remboursement des prêts',euros(r.loanPayments||0))}
+ <h3>Recettes du dernier mois</h3>${line('Loyers des logements municipaux',euros(r.rent||0))}${line('Impôts et taxes',euros(r.taxes||0))}${line('Exportation d’électricité',euros(r.exportIncome||0))}${line('Tourisme',euros(r.touristIncome||0))}
+ <h3>Dépenses du dernier mois</h3>${line('Entretien bâtiments, services et politiques',euros(r.maintenance||0))}${line('Remboursement des prêts',euros(r.loanPayments||0))}
  <h3>Capacités actuelles</h3>${line('Population / places disponibles',fmt(active.pop)+' / '+fmt(s.housing))}${line('Électricité excédentaire',fmt(Math.max(0,s.power-s.powerNeed))+' MWh/mois')}
  <div class="button-row"><button class="primary" id="budgetLoans">🏦 Faire un prêt</button><button class="secondary" id="budgetTax">⚖️ Impôts</button><button class="secondary" id="budgetExport">⚡ Exportations</button></div><p class="note">Les prix et revenus représentent des ordres de grandeur simplifiés du jeu. Les résultats sont recalculés à la fin de chaque mois.</p>`);
  $('budgetLoans').onclick=showLoans;$('budgetTax').onclick=showTaxes;$('budgetExport').onclick=showExport;}
@@ -509,9 +662,36 @@ function showLoans(){const loans=active.loans||[];
 function showExport(){const s=allStats(),surplus=Math.max(0,s.power-s.powerNeed);
  modal('⚡ Exportation d’électricité',`<p>Vends automatiquement la production excédentaire chaque mois. Les besoins des habitants et des entreprises sont servis en premier.</p><div class="summary-grid"><div class="summary"><span>Production</span><strong>${fmt(s.power)}</strong></div><div class="summary"><span>Consommation</span><strong>${fmt(s.powerNeed)}</strong></div><div class="summary"><span>Surplus</span><strong>${fmt(surplus)}</strong></div></div>${line('Prix indicatif de vente','83 € / MWh')}${line('Revenu estimé / mois',euros(surplus*83))}<div class="checkbox-row"><input type="checkbox" id="exportSwitch" ${active.exportPower?'checked':''}><label for="exportSwitch">Activer la vente automatique du surplus</label></div><div class="button-row"><button class="primary" id="exportBudget">Voir le budget</button></div><p class="note">1 unité de production = 1 MWh par mois de jeu, selon les règles simplifiées du simulateur.</p>`);
  $('exportSwitch').onchange=e=>{active.exportPower=e.target.checked;persist();toast(active.exportPower?'Exportation activée':'Exportation désactivée')};$('exportBudget').onclick=showBudget;}
-function showServices(){const s=allStats();modal('📊 Informations sur la ville',`<div class="summary-grid"><div class="summary"><span>Population</span><strong>${fmt(active.pop)}</strong></div><div class="summary"><span>Satisfaction</span><strong>${s.happiness} %</strong></div><div class="summary"><span>Emplois</span><strong>${fmt(s.jobs)}</strong></div></div>${line('Capacité logements',fmt(s.housing))}${line('Accès aux routes',Math.round(s.roadRatio*100)+' %')}${line('Électricité produite / demandée',fmt(s.power)+' / '+fmt(s.powerNeed))}${line('Eau fournie / demandée',fmt(s.water)+' / '+fmt(s.waterNeed))}${line('Trafic (demande / capacité)',Math.round(s.congestion*100)+' %')}${line('Nombre de bâtiments et infrastructures',fmt(s.buildings))}${line('Qualité de l’air et environnement',s.greenScore+' %')}${line('Sécurité',s.security+' %')}${line('Santé',s.health+' %')}${line('Éducation',s.education+' %')}${line('Mobilité et embouteillages',s.transport+' %')}${line('Offres d’emploi',s.economy+' %')}${line('Parcelles achetées',fmt(owned.size))}${line('Crédits en cours',String(active.loans.length))}<div class="button-row"><button class="primary" id="infoBudget">💶 Budget</button><button class="secondary" id="infoExport">⚡ Surplus électrique</button></div>`);$('infoBudget').onclick=showBudget;$('infoExport').onclick=showExport;}
+
+const POLICY_OPTIONS=[
+ ['recycling','♻️ Tri sélectif','−20 % de déchets produits · 18 000 € par mois'],
+ ['publicTransit','🚌 Transport public gratuit','+50 % d’efficacité des transports · 90 000 € par mois'],
+ ['educationPriority','🎓 Éducation renforcée','Écoles plus efficaces · 110 000 € par mois'],
+ ['greenEnergy','🌱 Transition écologique','−28 % de pollution · 60 000 € par mois'],
+ ['noiseProtection','🔇 Limitation du bruit','−40 % de bruit · 38 000 € par mois'],
+ ['cycleCity','🚲 Ville cyclable','Transport +400 · 42 000 € par mois'],
+ ['taxRelief','⚖️ Allègement fiscal','Satisfaction +4 · baisse des taxes commerciales']
+];
+function showPolicies(){
+ modal('📋 Politiques municipales',`<p>Active des mesures qui influencent réellement le trafic, la pollution, les déchets et le bonheur. Les coûts sont débités chaque mois.</p>${POLICY_OPTIONS.map(([id,title,info])=>`<div class="checkbox-row"><input id="pol-${id}" type="checkbox" ${active.policies[id]?'checked':''}><label for="pol-${id}"><b>${title}</b><br><small>${info}</small></label></div>`).join('')}${line('Budget mensuel des politiques',euros(allStats().policyCosts))}<div class="button-row"><button class="secondary" id="polBudget">💶 Budget</button><button class="primary" id="polStats">📊 Ville</button></div>`);
+ for(const [id] of POLICY_OPTIONS){$('pol-'+id).onchange=e=>{active.policies[id]=e.target.checked;persist();refreshUI();showPolicies()}}
+ $('polBudget').onclick=showBudget;$('polStats').onclick=showServices;
+}
+const DISTRICT_POLICIES=[['none','Aucune spécialisation'],['residential','Résidentiel calme'],['tourism','Tourisme'],['eco','Quartier écologique'],['industry','Emplois et industrie']];
+function showDistricts(){
+ modal('🏘️ Quartiers et spécialisations',`<p>Utilise « Créer un quartier » dans Gestion, puis trace une zone sur la carte. Chaque quartier peut recevoir une spécialisation.</p>${active.districts.length?active.districts.map((d,i)=>`<div class="field"><label for="district-${i}">🏘️ ${esc(d.name)} — cases ${d.minX}–${d.maxX} / ${d.minZ}–${d.maxZ}</label><div style="display:flex;gap:7px"><select id="district-${i}">${DISTRICT_POLICIES.map(([v,t])=>`<option value="${v}" ${d.policy===v?'selected':''}>${t}</option>`).join('')}</select><button class="danger-button" data-rmdistrict="${i}">Supprimer</button></div></div>`).join(''):'<p>Aucun quartier. Choisis l’outil « Créer un quartier ».</p>'}<div class="button-row"><button class="primary" id="districtDone">Terminé</button></div>`);
+ active.districts.forEach((d,i)=>{$('district-'+i).onchange=e=>{d.policy=e.target.value;persist();refreshUI()}});
+ $('modalBody').querySelectorAll('[data-rmdistrict]').forEach(btn=>btn.onclick=()=>{active.districts.splice(Number(btn.dataset.rmdistrict),1);persist();showDistricts()});
+ $('districtDone').onclick=()=>setOpen(false);
+}
+function showWeather(){
+ modal('🌤️ Heure et météo',`<p>Choisis une ambiance visuelle. Le cycle jour-nuit est facultatif.</p><div class="checkbox-row"><input id="dayNightSwitch" type="checkbox" ${active.dayNight?'checked':''}><label for="dayNightSwitch">🌙 Activer le cycle jour / nuit</label></div><div class="field"><label for="weatherChoice">Conditions météorologiques</label><select id="weatherChoice"><option value="sun" ${active.weather==='sun'?'selected':''}>☀️ Ensoleillé</option><option value="rain" ${active.weather==='rain'?'selected':''}>🌧️ Pluie</option><option value="fog" ${active.weather==='fog'?'selected':''}>🌫️ Brouillard</option></select></div><div class="button-row"><button id="weatherDone" class="primary">Appliquer</button></div>`);
+ $('weatherDone').onclick=()=>{active.dayNight=$('dayNightSwitch').checked;active.weather=$('weatherChoice').value;persist();setOpen(false);toast('Ambiance modifiée')};
+}
+
+function showServices(){const s=allStats();modal('📊 Informations sur la ville',`<div class="summary-grid"><div class="summary"><span>Population</span><strong>${fmt(active.pop)}</strong></div><div class="summary"><span>Satisfaction</span><strong>${s.happiness} %</strong></div><div class="summary"><span>Emplois</span><strong>${fmt(s.jobs)}</strong></div></div>${line('Capacité logements',fmt(s.housing))}${line('Accès aux routes',Math.round(s.roadRatio*100)+' %')}${line('Électricité produite / demandée',fmt(s.power)+' / '+fmt(s.powerNeed))}${line('Eau fournie / demandée',fmt(s.water)+' / '+fmt(s.waterNeed))}${line('Traitement des eaux usées',fmt(s.sewage)+' / '+fmt(s.sewageNeed)+' · '+Math.round(s.sewageRatio*100)+' %')}${line('Collecte des déchets',fmt(s.waste)+' / '+fmt(s.wasteNeed)+' · '+Math.round(s.wasteRatio*100)+' %')}${line('Capacité des transports publics',fmt(s.transitCapacity))}${line('Attractivité touristique',fmt(s.tourism))}${line('Valeur foncière',s.landValue+' %')}${line('Pollution / bruit',Math.round(s.pollution)+' / '+Math.round(s.noise))}${line('Demande logements / commerces / industries',s.residentialDemand+' % / '+s.commercialDemand+' % / '+s.industrialDemand+' %')}${line('Trafic (demande / capacité)',Math.round(s.congestion*100)+' %')}${line('Nombre de bâtiments et infrastructures',fmt(s.buildings))}${line('Qualité de l’air et environnement',s.greenScore+' %')}${line('Sécurité',s.security+' %')}${line('Santé',s.health+' %')}${line('Éducation',s.education+' %')}${line('Mobilité et embouteillages',s.transport+' %')}${line('Offres d’emploi',s.economy+' %')}${line('Parcelles achetées',fmt(owned.size))}${line('Crédits en cours',String(active.loans.length))}${line('Quartiers définis',String(active.districts.length))}<div class="button-row"><button class="primary" id="infoBudget">💶 Budget</button><button class="secondary" id="infoExport">⚡ Surplus électrique</button></div>`);$('infoBudget').onclick=showBudget;$('infoExport').onclick=showExport;}
 function inspectTile(t){const d=TYPES[t.type];if(!d){modal('🏛️ Hôtel de ville',`<p>Point de départ de ta ville. Cet édifice est protégé contre la démolition.</p>`);return}
- modal(d.icon+' '+d.name,`${line('Coordonnées',t.x+' / '+t.z)}${line('Prix de construction',euros(d.cost))}${line('Valeur récupérée en démolissant',euros(Math.round(d.cost*.6)))}${line('Entretien mensuel',euros(d.upkeep||0))}${d.people?line('Capacité d’accueil',fmt(d.people)+' habitants'):''}${d.jobs?line('Emplois',fmt(d.jobs)):''}${d.power?line('Électricité produite',fmt(d.power)+' MWh/mois'):''}${d.water?line('Eau fournie',fmt(d.water)+' unités/mois'):''}${line('Raccordement à une route',adjacentRoad(t.x,t.z)?'Oui':'Non')}<p class="note">Le terrain est calculé dans le monde courant.</p>`);
+ modal(d.icon+' '+d.name,`${line('Coordonnées',t.x+' / '+t.z)}${line('Prix de construction',euros(d.cost))}${line('Valeur récupérée en démolissant',euros(Math.round(d.cost*.6)))}${line('Entretien mensuel',euros(d.upkeep||0))}${d.people?line('Capacité d’accueil',fmt(d.people)+' habitants'):''}${d.jobs?line('Emplois',fmt(d.jobs)):''}${d.power?line('Électricité produite',fmt(d.power)+' MWh/mois'):''}${d.water?line('Eau fournie',fmt(d.water)+' unités/mois'):''}${d.waste?line('Traitement de déchets',fmt(d.waste)):''}${d.sewage?line('Traitement des eaux usées',fmt(d.sewage)):''}${d.transit?line('Transport public',fmt(d.transit)):''}${d.tourism?line('Attractivité touristique',fmt(d.tourism)):''}${d.pollution?line('Pollution',fmt(d.pollution)):''}${line('Raccordement à une route',adjacentRoad(t.x,t.z)?'Oui':'Non')}<p class="note">Le terrain est calculé dans le monde courant.</p>`);
 }
 function scale(){return (view==='3d'?28:27)*zoom}
 function origin(){return {x:screenW*.52+panX,y:screenH*.48+panY}}
@@ -542,7 +722,7 @@ function groundColor(t,x,z){const r=rand2(x,z,active?.seed||0);
 function roadConnections(x,z){return [[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dz])=>isRoad(at(x+dx,z+dz)?.type))}
 function groundTile(x,z){const tr=terrain(x,z),tile=at(x,z),t=tile?.type;
  let color=groundColor(tr,x,z);
- if(isRoad(t))color=TYPES[t].color;
+ if(isRoad(t)||isRail(t))color=TYPES[t].color;
  if(t==='park')color='#67b779';
  if(view==='2d'){
   const p=project(x,z),s=scale();ctx.fillStyle=color;ctx.fillRect(Math.floor(p.x-s/2),Math.floor(p.y-s/2),Math.ceil(s)+1,Math.ceil(s)+1);
@@ -555,16 +735,24 @@ function groundTile(x,z){const tr=terrain(x,z),tile=at(x,z),t=tile?.type;
   if(tr==='river'&&!t){const a=project(x-.27,z-.1,.01),b=project(x+.23,z-.1,.01);segment(a,b,'rgba(204,244,251,.33)',1.15)}
   if(tr==='forest'&&!t&&rand2(x,z,active.seed)>.91){drawTree(x,z,.63)}
  }
- if(isRoad(t))drawRoad(x,z,t);
+ if(isRoad(t)||isRail(t))drawRoad(x,z,t);
 }
-function drawRoad(x,z,t){const s=scale(),con=roadConnections(x,z),dirs=con.length?con:[[0,-1],[0,1]],markup=t==='avenue'?'#f2d46b':'#e7e7c3';
+function drawRoad(x,z,t){const s=scale(),con=isRail(t)?ADJ.filter(([dx,dz])=>isRail(at(x+dx,z+dz)?.type)):roadConnections(x,z),dirs=con.length?con:[[0,-1],[0,1]],markup=t==='avenue'?'#f2d46b':'#e7e7c3';
+ if(isRail(t)){
+  for(const [dx,dz] of dirs){
+   const a=project(x,z,.12),b=project(x+dx*.47,z+dz*.47,.12);
+   segment(a,b,'#393b44',Math.max(3,s*.25));segment(a,b,t==='tramRail'?'#d3bd85':'#c5c6cf',Math.max(2,s*.06));
+  }
+  return;
+ }
  if(t==='roundabout'){
   const p=project(x,z);disk(p.x,p.y,s*(view==='2d'?.25:.16),'#699268');disk(p.x,p.y,s*.06,'#dec273');return;
  }
  for(const [dx,dz] of dirs){const a=project(x,z,.09),b=project(x+dx*.36,z+dz*.36,.09);segment(a,b,markup,Math.max(1,s*.055))}
- if(t==='avenue'){
+ if(t==='avenue'||t==='boulevard'||t==='highway'){
   const a=project(x-.34,z-.34,.09),b=project(x+.34,z+.34,.09);segment(a,b,'rgba(255,255,255,.28)',1);
  }
+ if(t==='rail'||t==='tramRail'||t==='metroRail'){const p=project(x,z,.11);disk(p.x,p.y,Math.max(2,s*.065),'#dddddf')}
  if(terrain(x,z)==='river'){
   // Les voies traversant la rivière sont des ponts à garde-corps.
   segment(project(x-.46,z-.44,.2),project(x+.46,z-.44,.2),'#e8e5dc',Math.max(1,s*.08));
@@ -641,6 +829,29 @@ function building(t){
   if(type==='school'){const p=project(x,z,d.height+.19);disk(p.x,p.y,Math.max(2,scale()*.12),'#f2cf67')}
   if(type==='shop'){drawBox(x,z+.30,.55,.16,.16,'#ef655b',.25)}return;
  }
+ // Buildings added in the expanded edition get matching original-style 2D/3D models.
+ if(d.visual==='green'){
+  if(type==='plaza'){drawBox(x,z,.88,.88,.06,'#d4c2a2');const q=project(x,z,.13);disk(q.x,q.y,Math.max(3,scale()*.18),'#8bc2d0')}
+  else {drawTree(x-.24,z-.24,.78);drawTree(x+.23,z+.16,.64);if(type==='cemetery')drawBox(x,z,.23,.40,.20,'#c1c0b2')}
+  return;
+ }
+ if(d.visual==='farm'){
+  for(let i=-2;i<=2;i++)segment(project(x-.4,z+i*.15,.08),project(x+.4,z+i*.15,.08),'#b19f55',Math.max(1,scale()*.045));
+  drawBox(x+.14,z+.13,.42,.40,d.height,d.color);roof(x+.14,z+.13,.47,.44,d.height,'#8d5948',.25);return;
+ }
+ if(d.visual==='station'){
+  drawBox(x,z,.89,.72,d.height,d.color);facade(x,z,.89,.72,d.height,'store');
+  segment(project(x-.43,z+.37,.14),project(x+.43,z+.37,.14),'#f2d17a',Math.max(1,scale()*.06));return;
+ }
+ if(d.visual==='sport'){
+  drawBox(x,z,.91,.91,Math.min(d.height,1.5),d.color);
+  if(type==='stadium'){const p=project(x,z,Math.min(d.height,1.5)+.1);disk(p.x,p.y,scale()*.27,'#6d9e78')}
+  else drawBox(x,z,.7,.7,.12,'#73aebb',Math.min(d.height,1.5));return;
+ }
+ if(d.visual==='line'){
+  const p=project(x,z,.12);segment(project(x-.42,z,.12),project(x+.42,z,.12),d.color,Math.max(2,scale()*.09));
+  disk(p.x,p.y,Math.max(2,scale()*.1),'#e5ebec');return;
+ }
  const w=type==='tower'?.75:.88;
  const colors=type==='house'?['#f2c591','#d9d8ce','#f0b9ad','#d9d0b4']:type==='luxury'?['#e9dbc4','#f0dfbf']:[];
  const col=colors.length?colors[Math.floor(rand2(x,z,active.seed)*colors.length)]:d.color;
@@ -653,11 +864,14 @@ function building(t){
   drawBox(x,z,w+.055,w+.055,.16,shade(d.color,.78),d.height);
   if(type==='tower'){drawBox(x-.2,z-.12,.23,.21,.36,'#9ca9b2',d.height+.16);drawBox(x+.2,z+.12,.2,.18,.23,'#aeb6bb',d.height+.16)}
  }
+ if(!ORIGINAL_TYPES.has(type)&&scale()>13){const q=project(x,z,d.height+.16);ctx.font=Math.max(12,Math.min(24,scale()*.48))+'px sans-serif';ctx.textAlign='center';ctx.fillText(d.icon,q.x,q.y)}
 }
 function roadTiles(){return [...tiles.values()].filter(t=>isRoad(t.type))}
+function railTiles(){return [...tiles.values()].filter(t=>isRail(t.type))}
+function getRailNeighbors(x,z){return ADJ.map(([dx,dz])=>({x:x+dx,z:z+dz})).filter(p=>isRail(at(p.x,p.z)?.type))}
 function getNeighbors(x,z){return [[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dz])=>({x:x+dx,z:z+dz})).filter(t=>isRoad(at(t.x,t.z)?.type))}
 function trafficTick(dt){if(!active)return;
- const roads=roadTiles(),s=allStats();if(roads.length===0){cars.length=0;return}
+ const roads=roadTiles(),s=allStats();if(roads.length===0){cars.length=0}else{
  const desired=Math.min(90,Math.max(0,Math.floor(active.pop/6+s.industries*3+s.shops*2+s.offices*2)));
  while(cars.length<desired){const t=roads[Math.floor(Math.random()*roads.length)];cars.push({x:t.x,z:t.z,from:{x:t.x,z:t.z},to:null,t:0,color:['#f66d64','#ecca66','#f2f6ff','#4077cc','#45b39d'][Math.floor(Math.random()*5)],direction:0})}
  if(cars.length>desired)cars.length=desired;
@@ -669,6 +883,18 @@ function trafficTick(dt){if(!active)return;
   car.x=car.from.x+(car.to.x-car.from.x)*car.t;car.z=car.from.z+(car.to.z-car.from.z)*car.t;
   if(car.t>=1){car.prev=car.from;car.from=car.to;car.to=null;car.t=0}
  }
+ }
+ const rails=railTiles(),target=rails.length>=2?Math.min(10,Math.floor(rails.length/3)+1):0;
+ while(trains.length<target){const t=rails[Math.floor(Math.random()*rails.length)];trains.push({x:t.x,z:t.z,from:{x:t.x,z:t.z},to:null,t:0,color:'#d7bc64',train:true})}
+ if(trains.length>target)trains.length=target;
+ for(const train of trains){
+  if(!isRail(at(train.from.x,train.from.z)?.type)){
+   const t=rails[Math.floor(Math.random()*rails.length)];if(!t)continue;train.from={x:t.x,z:t.z};train.to=null;train.t=0;
+  }
+  if(!train.to){const opts=getRailNeighbors(train.from.x,train.from.z);if(!opts.length)continue;const alternate=opts.filter(t=>t.x!==train.prev?.x||t.z!==train.prev?.z);train.to=(alternate.length?alternate:opts)[Math.floor(Math.random()*(alternate.length?alternate:opts).length)]}
+  train.t=Math.min(1,train.t+dt*.46);train.x=train.from.x+(train.to.x-train.from.x)*train.t;train.z=train.from.z+(train.to.z-train.from.z)*train.t;
+  if(train.t>=1){train.prev=train.from;train.from=train.to;train.to=null;train.t=0}
+ }
 }
 function carLane(car){
  const dx=car.to?Math.sign(car.to.x-car.from.x):1,dz=car.to?Math.sign(car.to.z-car.from.z):0;
@@ -677,7 +903,7 @@ function carLane(car){
 }
 function drawCar(car){
  if(!car.to)return;
- const lane=carLane(car),s=scale(),p=project(lane.x,lane.z,.22);
+ const lane=car.train?{x:car.x,z:car.z,dx:car.to.x-car.from.x,dz:car.to.z-car.from.z}:carLane(car),s=scale(),p=project(lane.x,lane.z,.22);
  if(view==='2d'){
   ctx.save();ctx.translate(p.x,p.y);ctx.rotate(Math.atan2(lane.dz,lane.dx));
   ctx.fillStyle='#182b36';ctx.fillRect(-s*.24,-s*.135,s*.48,s*.27);
@@ -718,7 +944,7 @@ function drawMiniMap(){
  const cell=size/GRID;
  for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++){
   const t=at(x,z),land=terrain(x,z);
-  m.fillStyle=t?(isRoad(t.type)?'#606974':TYPES[t.type]?.people?'#f0b67a':'#e9dfc1'):land==='river'?'#4eafd2':owned.has(key(x,z))?'#a4d58b':'#6a955b';
+  m.fillStyle=t?((isRoad(t.type)||isRail(t.type))?'#606974':TYPES[t.type]?.people?'#f0b67a':'#e9dfc1'):land==='river'?'#4eafd2':owned.has(key(x,z))?'#a4d58b':'#6a955b';
   m.fillRect(x*cell,z*cell,cell+.3,cell+.3);
  }
  const mid=unproject(screenW*.5,screenH*.52);
@@ -731,676 +957,139 @@ function draw(){if(!active){ctx.fillStyle='#7ab6d9';ctx.fillRect(0,0,screenW,scr
  for(const t of all)groundTile(t.x,t.z);
  // Buildings and vehicles share a depth-sort; cars behind buildings are occluded.
  const objects=[...tiles.values()].filter(t=>!isRoad(t.type)&&visibleTile(t.x,t.z)).map(t=>({type:'building',data:t,depth:renderDepth(t.x,t.z)}));
- for(const car of cars)if(car.to&&visibleTile(car.x,car.z))objects.push({type:'car',data:car,depth:renderDepth(car.x,car.z)});
+ for(const car of cars.concat(trains))if(car.to&&visibleTile(car.x,car.z))objects.push({type:'car',data:car,depth:renderDepth(car.x,car.z)});
  if(view==='3d')objects.sort((a,b)=>a.depth-b.depth|| (a.type==='car'?-1:1));
  for(const item of objects){if(item.type==='building')building(item.data);else drawCar(item.data)}
  if(areaPreview&&active){
-  const {plan}=selected==='removeWater'?{plan:areaPreview.cells.filter(c=>canPlace('removeWater',c.x,c.z)).map(c=>({...c,type:'removeWater'}))}:planBuild(selected,areaPreview.cells),planned=new Map(plan.map(c=>[key(c.x,c.z),c.type]));
-  for(const cell of areaPreview.cells){if(!visibleTile(cell.x,cell.z))continue;
-   const t=planned.get(key(cell.x,cell.z)),valid=!!t||selected==='bulldoze'&&canPlace('bulldoze',cell.x,cell.z);
-   const color=t==='road'?'rgba(237,204,103,.58)':valid?'rgba(72,222,159,.39)':'rgba(239,96,106,.23)';
-   poly(corners(cell.x,cell.z,1,1,.15),color,valid?'rgba(54,153,108,.6)':'rgba(180,46,46,.35)');
-  }
- }
- if(selected==='buyLand'||showParcels){
-  for(const c of all){if(!owned.has(key(c.x,c.z)))continue;poly(corners(c.x,c.z,1,1,.06),'rgba(244,204,84,.045)','rgba(250,225,117,.48)')}
- }
- if(hoveredCell&&(selected==='bulldoze'||selected==='inspect')){
-  const t=at(hoveredCell.x,hoveredCell.z);if(t&&t.type!=='townhall')poly(tileHull(t),selected==='bulldoze'?'rgba(244,72,70,.21)':'rgba(86,185,253,.20)',selected==='bulldoze'?'#ff6c74':'#8bdcff');
- }
- ctx.fillStyle='rgba(15,31,46,.66)';ctx.beginPath();ctx.roundRect(12,screenH*.56,view==='3d'?67:65,25,7);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.textAlign='left';ctx.fillText(view==='3d'?'◈ 3D':'▦ 2D',23,screenH*.56+17);
- if(Math.floor(performance.now()/150)!==lastMiniFrame){lastMiniFrame=Math.floor(performance.now()/150);drawMiniMap();}
-}
-function previewCells(start,end){if(mode==='area'){
- const cells=[];const x1=clamp(Math.min(start.x,end.x),0,GRID-1),x2=clamp(Math.max(start.x,end.x),0,GRID-1),z1=clamp(Math.min(start.z,end.z),0,GRID-1),z2=clamp(Math.max(start.z,end.z),0,GRID-1);
- for(let z=z1;z<=z2;z++)for(let x=x1;x<=x2;x++)cells.push({x,z});return cells.slice(0,450);
- }
- if(mode==='line'){
- const cells=[];let x0=start.x,z0=start.z,x1=end.x,z1=end.z,dx=Math.abs(x1-x0),dz=Math.abs(z1-z0),sx=x0<x1?1:-1,sz=z0<z1?1:-1,err=dx-dz;
- while(cells.length<GRID*2){cells.push({x:x0,z:z0});if(x0===x1&&z0===z1)break;const e=2*err;if(e>-dz){err-=dz;x0+=sx}if(e<dx){err+=dx;z0+=sz}}
- return cells;
- }
- return [end];
-}
-function setPreview(start,end){
- const cells=previewCells(start,end);areaPreview={cells};
- const p=selected==='removeWater'?{plan:cells.filter(c=>canPlace('removeWater',c.x,c.z)),roads:0,cost:0}:planBuild(selected,cells);$('selectionInfo').hidden=false;
- $('selectionInfo').textContent=p.plan.length+' éléments'+(p.roads?' dont '+p.roads+' routes':'')+' · Coût : '+euros(p.cost);
-}
-function endPreview(){areaPreview=null;$('selectionInfo').hidden=true}
-function setMode(next){mode=next;endPreview();refreshControls()}
-function setView(next){view=next;endPreview();refreshControls();toast('Vue '+next.toUpperCase()+' activée')}
-function zoomBy(ratio,cx=screenW/2,cy=screenH/2){
- const before=unproject(cx,cy),old=zoom;
- zoom=clamp(zoom*ratio,.26,3.4);
- // Keep the point under the cursor/fingers steady when zooming.
- if(old!==zoom){const p=project(before.x,before.z);panX+=cx-p.x;panY+=cy-p.y}
-}
-function eventPos(e){return {x:e.clientX,y:e.clientY}}
-function pinchInfo(){const p=[...pointerPoints.values()];if(p.length<2)return null;
- return {x:(p[0].x+p[1].x)/2,y:(p[0].y+p[1].y)/2,d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)};
-}
-function onDown(e){if(!active||$('overlay').classList.contains('open'))return;
- try{canvas.setPointerCapture(e.pointerId)}catch{}
- pointerPoints.set(e.pointerId,eventPos(e));
- if(pointerPoints.size>=2){const info=pinchInfo();pinchDistance=info.d;pinchCenter=info;pointerStart=null;endPreview();return}
- const raw=unproject(e.clientX,e.clientY);
- const visual=(selected==='bulldoze'||selected==='inspect')?pickBuilding(e.clientX,e.clientY):null;
- const cell=visual?{x:visual.x,z:visual.z}:raw;
- pointerStart={id:e.pointerId,first:eventPos(e),last:eventPos(e),cell,moved:false,rotate:e.button===2||e.altKey};
- if(mode!=='single'&&mode!=='navigate'&&!pointerStart.rotate)setPreview(raw,raw);
-}
-function onMove(e){
- if(!pointerPoints.has(e.pointerId)){
-  if(active&&(selected==='bulldoze'||selected==='inspect')){const hit=pickBuilding(e.clientX,e.clientY);hoveredCell=hit?{x:hit.x,z:hit.z}:null}return;
- }
- pointerPoints.set(e.pointerId,eventPos(e));
- if(pointerPoints.size>=2){const p=pinchInfo();if(pinchCenter){panX+=p.x-pinchCenter.x;panY+=p.y-pinchCenter.y}
-  if(pinchDistance>0)zoomBy(p.d/pinchDistance,p.x,p.y);
-  pinchDistance=p.d;pinchCenter=p;return;
- }
- if(!pointerStart||pointerStart.id!==e.pointerId)return;
- const dx=e.clientX-pointerStart.last.x,dy=e.clientY-pointerStart.last.y;
- if(Math.hypot(e.clientX-pointerStart.first.x,e.clientY-pointerStart.first.y)>9)pointerStart.moved=true;
- if(pointerStart.rotate){if(view==='3d')yaw+=dx*.008;else{panX+=dx;panY+=dy}}
- else if(mode==='navigate'||mode==='single'){if(pointerStart.moved){panX+=dx;panY+=dy}}
- else setPreview(unproject(pointerStart.first.x,pointerStart.first.y),unproject(e.clientX,e.clientY));
- pointerStart.last=eventPos(e);
-}
-function onUp(e){
- pointerPoints.delete(e.pointerId);
- if(pointerPoints.size){pointerStart=null;pinchDistance=0;pinchCenter=null;endPreview();return}
- if(!pointerStart||pointerStart.id!==e.pointerId){endPreview();return}
- const p=pointerStart;pointerStart=null;
- if(p.rotate||mode==='navigate'){endPreview();return}
- const end=unproject(e.clientX,e.clientY),start=unproject(p.first.x,p.first.y);
- if(!inGrid(end.x,end.z)||!inGrid(start.x,start.z)){
-  endPreview();toast('Placement hors de la carte.');return;
- }
- if(mode==='single'&&!p.moved){
-  const hit=(selected==='bulldoze'||selected==='inspect')?pickBuilding(e.clientX,e.clientY):null;
-  build(selected,[hit?{x:hit.x,z:hit.z}:end]);
- }else if(mode!=='single'&&p.moved){
-  build(selected,previewCells(start,end));
- }else if(mode!=='single')build(selected,[end]);
- endPreview();
-}
-function handleKeyboard(e){if(e.target.matches('input,textarea,select')||e.ctrlKey||e.metaKey)return;
- if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undoLast();return}
- if(e.key==='Escape'){if($('overlay').classList.contains('open')&&active){setOpen(false);return}selected='inspect';refreshControls();return}
- if($('overlay').classList.contains('open'))return;
- if(e.key===' '){e.preventDefault();paused=!paused;refreshControls();return}
- const k=e.key.toLowerCase();if(k==='2'||k==='3'){setView(k==='2'?'2d':'3d');return}
- if(k==='r'){yaw+=Math.PI/4;return}if(k==='b'){selected='bulldoze';currentCategory='management';mode='single';refreshControls();return}if(k==='m'){setMode(mode==='navigate'?'single':'navigate');return}
- if(k==='+'||k==='='){zoomBy(1.15);return}if(k==='-'){zoomBy(1/1.15);return}
- const step=35;if(k==='arrowleft'||k==='a')panX+=step;if(k==='arrowright'||k==='d')panX-=step;if(k==='arrowup'||k==='w')panY+=step;if(k==='arrowdown'||k==='s')panY-=step;
- if(['arrowleft','arrowright','arrowup','arrowdown'].includes(k))e.preventDefault();
-}
-function resize(){const dpr=Math.min(window.devicePixelRatio||1,2);screenW=window.innerWidth;screenH=window.innerHeight;canvas.width=Math.round(screenW*dpr);canvas.height=Math.round(screenH*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}
-function loop(now){requestAnimationFrame(loop);
- const dt=Math.min(.1,(now-framePrev)/1000||0);framePrev=now;
- if(active){if(!paused){simAccum+=dt*speed;while(simAccum>=18){simAccum-=18;monthEnd()}trafficTick(dt*speed)}saveAccum+=dt;if(saveAccum>=15){saveAccum=0;persist()}}
- if(now-lastDraw>=34){draw();lastDraw=now}
-}
-function attachControls(){
- canvas.addEventListener('pointerdown',onDown);canvas.addEventListener('pointermove',onMove);canvas.addEventListener('pointerup',onUp);canvas.addEventListener('pointercancel',e=>{pointerPoints.delete(e.pointerId);pointerStart=null;endPreview()});canvas.addEventListener('contextmenu',e=>e.preventDefault());
- canvas.addEventListener('wheel',e=>{e.preventDefault();zoomBy(Math.exp(-e.deltaY*.0015),e.clientX,e.clientY)},{passive:false});
- $('zoomIn').onclick=()=>zoomBy(1.23);$('zoomOut').onclick=()=>zoomBy(1/1.23);
- $('rotate').onclick=()=>{yaw+=Math.PI/4;toast('Carte tournée de 45°')};
- $('recenter').onclick=()=>{panX=0;panY=0;zoom=defaultZoom();yaw=Math.PI/4};
- $('viewToggle').onclick=()=>setView(view==='3d'?'2d':'3d');
- $('speedBtn').onclick=()=>{const rates=[1,2,4,8];speed=rates[(rates.indexOf(speed)+1)%rates.length];refreshControls();toast('Vitesse du temps : ×'+speed)};
- $('pauseBtn').onclick=()=>{paused=!paused;refreshControls()};
- $('undoBtn').onclick=undoLast;$('worldsBtn').onclick=showWorldList;$('cityInfo').onclick=showServices;
- $('modeSingle').onclick=()=>setMode('single');$('modeArea').onclick=()=>setMode('area');$('modeLine').onclick=()=>setMode('line');
- $('modeNavigate').onclick=()=>setMode('navigate');$('navBtn').onclick=()=>setMode(mode==='navigate'?'single':'navigate');
- $('exitBtn').onclick=()=>{persist();active=null;tiles=new Map();owned=new Set();dryRiver=new Set();undoStack=[];$('undoBtn').disabled=true;cars=[];showWorldList()};
- $('minimap').addEventListener('pointerdown',e=>{if(!active)return;const rect=e.currentTarget.getBoundingClientRect();const x=clamp(Math.floor((e.clientX-rect.left)/rect.width*GRID),0,GRID-1),z=clamp(Math.floor((e.clientY-rect.top)/rect.height*GRID),0,GRID-1);const q=project(x,z);panX+=screenW*.51-q.x;panY+=screenH*.48-q.y});
- document.querySelectorAll('.category').forEach(b=>b.onclick=()=>{currentCategory=b.dataset.cat;const first=Object.entries(TYPES).find(([_,d])=>d.category===currentCategory);if(first)selected=first[0];if(TYPES[selected]?.zone||selected==='buyLand'||selected==='removeWater')mode='area';else if(isRoad(selected))mode='line';else mode='single';refreshControls()});
- $('collapseStatus').onclick=()=>{const el=$('statusContents');el.hidden=!el.hidden;$('collapseStatus').textContent=el.hidden?'+':'−'};
- window.addEventListener('keydown',handleKeyboard);window.addEventListener('resize',resize);
- document.addEventListener('visibilitychange',()=>{if(document.hidden)persist()});window.addEventListener('beforeunload',()=>persist());
- $('overlay').addEventListener('click',e=>{if(e.target===$('overlay')&&active)setOpen(false)});
-}
-function init(){worlds=readWorlds();resize();attachControls();refreshControls();showWorldList();requestAnimationFrame(loop);
- setTimeout(()=>{const loading=$('loadingScreen');if(!loading)return;loading.classList.add('done');setTimeout(()=>loading.remove(),320)},700)}
-init();
-})();
-
-</script>
-</body>
-</html>
-$('month').textContent=formatDate(active.month);$('population').textContent=fmt(active.pop);$('happiness').textContent=s.happiness+'%';bar('happinessBar',s.happiness/100);
-
- $('power').textContent=active.options.needPower?fmt(s.power)+' / '+fmt(s.powerNeed):'Non requis';bar('powerBar',s.pRatio);
-
- $('water').textContent=active.options.needWater?fmt(s.water)+' / '+fmt(s.waterNeed):'Non requis';bar('waterBar',s.wRatio);
-
- $('traffic').textContent=s.congestion>1.3?'Embouteillages':s.congestion>.75?'Chargé':'Fluide';bar('trafficBar',1-Math.min(1,s.congestion/2));
-
- $('jobs').textContent=fmt(s.jobs)+' / '+fmt(Math.ceil(active.pop*.48));
-
- $('landCount').textContent=fmt(owned.size)+' cases';$('air').textContent=s.greenScore+' %';bar('airBar',s.greenScore/100);
-
- $('security').textContent=s.security+' %';bar('securityBar',s.security/100);
-
- $('cityMessage').textContent=active.options.needPower&&s.pRatio<1?'⚡ Construis une centrale, une éolienne ou un barrage.':active.options.needWater&&s.wRatio<1?'💧 La ville manque d’eau potable.':s.congestion>1.3?'🚗 Embouteillages ! Ajoute des avenues et des routes.':s.roadRatio<.95?'🛣️ Raccorde les habitations aux routes.':s.housing===0?'🏠 Commence par construire des logements.':'✅ La ville se développe. Consulte le budget chaque mois.';
-
- refreshControls();
-
-}
-
-function openAction(id){if(!active)return;({budget:showBudget,loans:showLoans,taxes:showTaxes,export:showExport,save:()=>persist(true),worlds:showWorldList,services:showServices})[id]?.()}
-
-function line(label,value){return `<div class="listrow"><span>${label}</span><b>${value}</b></div>`}
-
-function showBudget(){const s=allStats(),r=active.lastReport;
-
- modal('💶 Budget et finances',`<div class="summary-grid"><div class="summary"><span>Trésorerie</span><strong>${active.options.unlimited?'∞':euros(active.money)}</strong></div><div class="summary"><span>Recettes / mois</span><strong>${euros(r.income||0)}</strong></div><div class="summary"><span>Solde / mois</span><strong>${r.profit>=0?'+':''}${euros(r.profit||0)}</strong></div></div>
-
- <h3>Recettes du dernier mois</h3>${line('Loyers des logements municipaux',euros(r.rent||0))}${line('Impôts et taxes',euros(r.taxes||0))}${line('Exportation d’électricité',euros(r.exportIncome||0))}
-
- <h3>Dépenses du dernier mois</h3>${line('Entretien bâtiments et infrastructures',euros(r.maintenance||0))}${line('Remboursement des prêts',euros(r.loanPayments||0))}
-
- <h3>Capacités actuelles</h3>${line('Population / places disponibles',fmt(active.pop)+' / '+fmt(s.housing))}${line('Électricité excédentaire',fmt(Math.max(0,s.power-s.powerNeed))+' MWh/mois')}
-
- <div class="button-row"><button class="primary" id="budgetLoans">🏦 Faire un prêt</button><button class="secondary" id="budgetTax">⚖️ Impôts</button><button class="secondary" id="budgetExport">⚡ Exportations</button></div><p class="note">Les prix et revenus représentent des ordres de grandeur simplifiés du jeu. Les résultats sont recalculés à la fin de chaque mois.</p>`);
-
- $('budgetLoans').onclick=showLoans;$('budgetTax').onclick=showTaxes;$('budgetExport').onclick=showExport;}
-
-function showTaxes(){modal('⚖️ Fiscalité',`<p>Les taux influencent les recettes du prochain mois. Des taxes trop fortes réduisent la satisfaction des habitants.</p>${[
-
- ['residential','Impôts résidentiels'],['commercial','Taxes commerciales'],['industrial','Taxes industrielles']].map(([k,v])=>`<div class="field"><label for="tax-${k}">${v} — <b id="val-${k}">${active.tax[k]} %</b></label><input id="tax-${k}" type="range" min="0" max="25" step="1" value="${active.tax[k]}" style="width:100%;accent-color:#f9c96e"></div>`).join('')}<div class="button-row"><button class="primary" id="returnBudget">Revenir au budget</button></div>`);
-
- for(const k of Object.keys(TAX_DEFAULT))$('tax-'+k).oninput=e=>{active.tax[k]=Number(e.target.value);$('val-'+k).textContent=active.tax[k]+' %';persist();refreshUI()};$('returnBudget').onclick=showBudget;}
-
-function showLoans(){const loans=active.loans||[];
-
- modal('🏦 Emprunts municipaux',`<p>Financement à <b>3,5 % par an</b> avec mensualités fixes. Les remboursements sont prélevés chaque mois de jeu. Maximum 4 prêts actifs.</p><div class="summary-grid"><div class="summary"><span>Prêts actifs</span><strong>${loans.length} / 4</strong></div><div class="summary"><span>Capital restant</span><strong>${euros(loans.reduce((s,l)=>s+l.remaining,0))}</strong></div><div class="summary"><span>Mensualités</span><strong>${euros(loans.reduce((s,l)=>s+l.payment,0))}</strong></div></div>${loans.length?`<h3>Prêts en cours</h3>${loans.map(l=>line(euros(l.remaining)+' restant',euros(l.payment)+'/mois · '+l.monthsLeft+' mois')).join('')}`:''}
-
- <h3>Nouveau prêt</h3><div class="field"><label for="loanYears">Durée de remboursement</label><select id="loanYears"><option value="2">2 ans — 24 mois</option><option value="5" selected>5 ans — 60 mois</option><option value="10">10 ans — 120 mois</option></select></div><div class="button-row">${[2000000,10000000,25000000,50000000].map(a=>`<button class="btn-card" data-borrow="${a}" ${loans.length>=4?'disabled':''}><b>+ ${euros(a)}</b><small id="loan-${a}">${euros(loanPayment(a,5))} / mois</small></button>`).join('')}</div><div class="button-row"><button class="secondary" id="loanBudget">← Budget</button></div>`);
-
- $('loanYears').onchange=()=>[2000000,10000000,25000000,50000000].forEach(a=>$('loan-'+a).textContent=euros(loanPayment(a,Number($('loanYears').value)))+'/mois');
-
- $('modalBody').querySelectorAll('[data-borrow]').forEach(b=>b.onclick=()=>takeLoan(Number(b.dataset.borrow),Number($('loanYears').value)));$('loanBudget').onclick=showBudget;}
-
-function showExport(){const s=allStats(),surplus=Math.max(0,s.power-s.powerNeed);
-
- modal('⚡ Exportation d’électricité',`<p>Vends automatiquement la production excédentaire chaque mois. Les besoins des habitants et des entreprises sont servis en premier.</p><div class="summary-grid"><div class="summary"><span>Production</span><strong>${fmt(s.power)}</strong></div><div class="summary"><span>Consommation</span><strong>${fmt(s.powerNeed)}</strong></div><div class="summary"><span>Surplus</span><strong>${fmt(surplus)}</strong></div></div>${line('Prix indicatif de vente','83 € / MWh')}${line('Revenu estimé / mois',euros(surplus*83))}<div class="checkbox-row"><input type="checkbox" id="exportSwitch" ${active.exportPower?'checked':''}><label for="exportSwitch">Activer la vente automatique du surplus</label></div><div class="button-row"><button class="primary" id="exportBudget">Voir le budget</button></div><p class="note">1 unité de production = 1 MWh par mois de jeu, selon les règles simplifiées du simulateur.</p>`);
-
- $('exportSwitch').onchange=e=>{active.exportPower=e.target.checked;persist();toast(active.exportPower?'Exportation activée':'Exportation désactivée')};$('exportBudget').onclick=showBudget;}
-
-function showServices(){const s=allStats();modal('📊 Informations sur la ville',`<div class="summary-grid"><div class="summary"><span>Population</span><strong>${fmt(active.pop)}</strong></div><div class="summary"><span>Satisfaction</span><strong>${s.happiness} %</strong></div><div class="summary"><span>Emplois</span><strong>${fmt(s.jobs)}</strong></div></div>${line('Capacité logements',fmt(s.housing))}${line('Accès aux routes',Math.round(s.roadRatio*100)+' %')}${line('Électricité produite / demandée',fmt(s.power)+' / '+fmt(s.powerNeed))}${line('Eau fournie / demandée',fmt(s.water)+' / '+fmt(s.waterNeed))}${line('Trafic (demande / capacité)',Math.round(s.congestion*100)+' %')}${line('Nombre de bâtiments et infrastructures',fmt(s.buildings))}${line('Qualité de l’air et environnement',s.greenScore+' %')}${line('Sécurité',s.security+' %')}${line('Santé',s.health+' %')}${line('Éducation',s.education+' %')}${line('Mobilité et embouteillages',s.transport+' %')}${line('Offres d’emploi',s.economy+' %')}${line('Parcelles achetées',fmt(owned.size))}${line('Crédits en cours',String(active.loans.length))}<div class="button-row"><button class="primary" id="infoBudget">💶 Budget</button><button class="secondary" id="infoExport">⚡ Surplus électrique</button></div>`);$('infoBudget').onclick=showBudget;$('infoExport').onclick=showExport;}
-
-function inspectTile(t){const d=TYPES[t.type];if(!d){modal('🏛️ Hôtel de ville',`<p>Point de départ de ta ville. Cet édifice est protégé contre la démolition.</p>`);return}
-
- modal(d.icon+' '+d.name,`${line('Coordonnées',t.x+' / '+t.z)}${line('Prix de construction',euros(d.cost))}${line('Valeur récupérée en démolissant',euros(Math.round(d.cost*.6)))}${line('Entretien mensuel',euros(d.upkeep||0))}${d.people?line('Capacité d’accueil',fmt(d.people)+' habitants'):''}${d.jobs?line('Emplois',fmt(d.jobs)):''}${d.power?line('Électricité produite',fmt(d.power)+' MWh/mois'):''}${d.water?line('Eau fournie',fmt(d.water)+' unités/mois'):''}${line('Raccordement à une route',adjacentRoad(t.x,t.z)?'Oui':'Non')}<p class="note">Le terrain est calculé dans le monde courant.</p>`);
-
-}
-
-function scale(){return (view==='3d'?28:27)*zoom}
-
-function origin(){return {x:screenW*.52+panX,y:screenH*.48+panY}}
-
-function project(x,z,h=0){const s=scale(),o=origin(),dx=x-(GRID-1)/2,dz=z-(GRID-1)/2;
-
- if(view==='2d')return {x:o.x+dx*s,y:o.y+dz*s};
-
- const c=Math.cos(yaw),t=Math.sin(yaw);
-
- return {x:o.x+(dx*c-dz*t)*s,y:o.y+(dx*t+dz*c)*s*.59-h*s*.86};
-
-}
-
-function unproject(sx,sy){const s=scale(),o=origin(),u=(sx-o.x)/s,v=(sy-o.y)/s;
-
- if(view==='2d')return {x:Math.round(u+(GRID-1)/2),z:Math.round(v+(GRID-1)/2)};
-
- const t=v/.59,c=Math.cos(yaw),sn=Math.sin(yaw);
-
- return {x:Math.round(u*c+t*sn+(GRID-1)/2),z:Math.round(-u*sn+t*c+(GRID-1)/2)};
-
-}
-
-function poly(points,color,outline='rgba(0,0,0,.1)'){if(!points.length)return;ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);ctx.closePath();ctx.fillStyle=color;ctx.fill();if(outline){ctx.strokeStyle=outline;ctx.lineWidth=.6;ctx.stroke()}}
-
-function segment(a,b,color,width=2){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.s[... ELLIPSIZATION ...].z)}));
-
- for(const car of cars)if(car.to&&visibleTile(car.x,car.z))objects.push({type:'car',data:car,depth:renderDepth(car.x,car.z)});
-
- if(view==='3d')objects.sort((a,b)=>a.depth-b.depth|| (a.type==='car'?-1:1));
-
- for(const item of objects){if(item.type==='building')building(item.data);else drawCar(item.data)}
-
- if(areaPreview&&active){
-
   const {plan}=planBuild(selected,areaPreview.cells),planned=new Map(plan.map(c=>[key(c.x,c.z),c.type]));
-
   for(const cell of areaPreview.cells){if(!visibleTile(cell.x,cell.z))continue;
-
    const t=planned.get(key(cell.x,cell.z)),valid=!!t||selected==='bulldoze'&&canPlace('bulldoze',cell.x,cell.z);
-
    const color=t==='road'?'rgba(237,204,103,.58)':valid?'rgba(72,222,159,.39)':'rgba(239,96,106,.23)';
-
    poly(corners(cell.x,cell.z,1,1,.15),color,valid?'rgba(54,153,108,.6)':'rgba(180,46,46,.35)');
-
   }
-
  }
-
  if(selected==='buyLand'||showParcels){
-
   for(const c of all){if(!owned.has(key(c.x,c.z)))continue;poly(corners(c.x,c.z,1,1,.06),'rgba(244,204,84,.045)','rgba(250,225,117,.48)')}
-
  }
-
  if(hoveredCell&&(selected==='bulldoze'||selected==='inspect')){
-
   const t=at(hoveredCell.x,hoveredCell.z);if(t&&t.type!=='townhall')poly(tileHull(t),selected==='bulldoze'?'rgba(244,72,70,.21)':'rgba(86,185,253,.20)',selected==='bulldoze'?'#ff6c74':'#8bdcff');
-
  }
-
+ if(active.weather==='fog'){ctx.fillStyle='rgba(215,225,235,.16)';ctx.fillRect(0,0,screenW,screenH)}
+ if(active.weather==='rain'){ctx.strokeStyle='rgba(190,220,245,.29)';ctx.lineWidth=1;const t=performance.now()/15;for(let i=0;i<90;i++){const x=(i*131+t*1.3)%screenW,y=(i*97+t*2)%screenH;segment({x,y},{x:x-5,y:y+11},'rgba(190,220,245,.33)',1)}}
+ if(active.dayNight){const hour=(active.month*2+performance.now()/4000*speed)%24;const darkness=hour>19||hour<6?.28:hour>17?.13:0;if(darkness){ctx.fillStyle='rgba(10,22,53,'+darkness+')';ctx.fillRect(0,0,screenW,screenH)}}
  ctx.fillStyle='rgba(15,31,46,.66)';ctx.beginPath();ctx.roundRect(12,screenH*.56,view==='3d'?67:65,25,7);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.textAlign='left';ctx.fillText(view==='3d'?'◈ 3D':'▦ 2D',23,screenH*.56+17);
-
  if(Math.floor(performance.now()/150)!==lastMiniFrame){lastMiniFrame=Math.floor(performance.now()/150);drawMiniMap();}
-
 }
-
 function previewCells(start,end){if(mode==='area'){
-
  const cells=[];const x1=clamp(Math.min(start.x,end.x),0,GRID-1),x2=clamp(Math.max(start.x,end.x),0,GRID-1),z1=clamp(Math.min(start.z,end.z),0,GRID-1),z2=clamp(Math.max(start.z,end.z),0,GRID-1);
-
  for(let z=z1;z<=z2;z++)for(let x=x1;x<=x2;x++)cells.push({x,z});return cells.slice(0,450);
-
  }
-
  if(mode==='line'){
-
  const cells=[];let x0=start.x,z0=start.z,x1=end.x,z1=end.z,dx=Math.abs(x1-x0),dz=Math.abs(z1-z0),sx=x0<x1?1:-1,sz=z0<z1?1:-1,err=dx-dz;
-
  while(cells.length<GRID*2){cells.push({x:x0,z:z0});if(x0===x1&&z0===z1)break;const e=2*err;if(e>-dz){err-=dz;x0+=sx}if(e<dx){err+=dx;z0+=sz}}
-
  return cells;
-
  }
-
  return [end];
-
 }
-
 function setPreview(start,end){
-
  const cells=previewCells(start,end);areaPreview={cells};
-
  const p=planBuild(selected,cells);$('selectionInfo').hidden=false;
-
  $('selectionInfo').textContent=p.plan.length+' éléments'+(p.roads?' dont '+p.roads+' routes':'')+' · Coût : '+euros(p.cost);
-
 }
-
 function endPreview(){areaPreview=null;$('selectionInfo').hidden=true}
-
 function setMode(next){mode=next;endPreview();refreshControls()}
-
 function setView(next){view=next;endPreview();refreshControls();toast('Vue '+next.toUpperCase()+' activée')}
-
 function zoomBy(ratio,cx=screenW/2,cy=screenH/2){
-
  const before=unproject(cx,cy),old=zoom;
-
  zoom=clamp(zoom*ratio,.26,3.4);
-
  // Keep the point under the cursor/fingers steady when zooming.
-
  if(old!==zoom){const p=project(before.x,before.z);panX+=cx-p.x;panY+=cy-p.y}
-
 }
-
 function eventPos(e){return {x:e.clientX,y:e.clientY}}
-
 function pinchInfo(){const p=[...pointerPoints.values()];if(p.length<2)return null;
-
  return {x:(p[0].x+p[1].x)/2,y:(p[0].y+p[1].y)/2,d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)};
-
 }
-
 function onDown(e){if(!active||$('overlay').classList.contains('open'))return;
-
  try{canvas.setPointerCapture(e.pointerId)}catch{}
-
  pointerPoints.set(e.pointerId,eventPos(e));
-
  if(pointerPoints.size>=2){const info=pinchInfo();pinchDistance=info.d;pinchCenter=info;pointerStart=null;endPreview();return}
-
  const raw=unproject(e.clientX,e.clientY);
-
  const visual=(selected==='bulldoze'||selected==='inspect')?pickBuilding(e.clientX,e.clientY):null;
-
  const cell=visual?{x:visual.x,z:visual.z}:raw;
-
  pointerStart={id:e.pointerId,first:eventPos(e),last:eventPos(e),cell,moved:false,rotate:e.button===2||e.altKey};
-
  if(mode!=='single'&&mode!=='navigate'&&!pointerStart.rotate)setPreview(raw,raw);
-
 }
-
 function onMove(e){
-
  if(!pointerPoints.has(e.pointerId)){
-
   if(active&&(selected==='bulldoze'||selected==='inspect')){const hit=pickBuilding(e.clientX,e.clientY);hoveredCell=hit?{x:hit.x,z:hit.z}:null}return;
-
  }
-
  pointerPoints.set(e.pointerId,eventPos(e));
-
  if(pointerPoints.size>=2){const p=pinchInfo();if(pinchCenter){panX+=p.x-pinchCenter.x;panY+=p.y-pinchCenter.y}
-
   if(pinchDistance>0)zoomBy(p.d/pinchDistance,p.x,p.y);
-
   pinchDistance=p.d;pinchCenter=p;return;
-
  }
-
  if(!pointerStart||pointerStart.id!==e.pointerId)return;
-
  const dx=e.clientX-pointerStart.last.x,dy=e.clientY-pointerStart.last.y;
-
  if(Math.hypot(e.clientX-pointerStart.first.x,e.clientY-pointerStart.first.y)>9)pointerStart.moved=true;
-
  if(pointerStart.rotate){if(view==='3d')yaw+=dx*.008;else{panX+=dx;panY+=dy}}
-
  else if(mode==='navigate'||mode==='single'){if(pointerStart.moved){panX+=dx;panY+=dy}}
-
  else setPreview(unproject(pointerStart.first.x,pointerStart.first.y),unproject(e.clientX,e.clientY));
-
  pointerStart.last=eventPos(e);
-
 }
-
 function onUp(e){
-
  pointerPoints.delete(e.pointerId);
-
  if(pointerPoints.size){pointerStart=null;pinchDistance=0;pinchCenter=null;endPreview();return}
-
  if(!pointerStart||pointerStart.id!==e.pointerId){endPreview();return}
-
  const p=pointerStart;pointerStart=null;
-
  if(p.rotate||mode==='navigate'){endPreview();return}
-
  if(mode==='single'&&!p.moved){
-
   const hit=(selected==='bulldoze'||selected==='inspect')?pickBuilding(e.clientX,e.clientY):null;
-
   build(selected,[hit?{x:hit.x,z:hit.z}:unproject(e.clientX,e.clientY)]);
-
  }else if(mode!=='single'&&p.moved){
-
   build(selected,previewCells(unproject(p.first.x,p.first.y),unproject(e.clientX,e.clientY)));
-
  }else if(mode!=='single')build(selected,[unproject(e.clientX,e.clientY)]);
-
  endPreview();
-
 }
-
 function handleKeyboard(e){if(e.target.matches('input,textarea,select')||e.ctrlKey||e.metaKey)return;
-
  if(e.key==='Escape'){if($('overlay').classList.contains('open')&&active){setOpen(false);return}selected='inspect';refreshControls();return}
-
  if($('overlay').classList.contains('open'))return;
-
  if(e.key===' '){e.preventDefault();paused=!paused;refreshControls();return}
-
  const k=e.key.toLowerCase();if(k==='2'||k==='3'){setView(k==='2'?'2d':'3d');return}
-
  if(k==='r'){yaw+=Math.PI/4;return}if(k==='b'){selected='bulldoze';currentCategory='management';mode='single';refreshControls();return}if(k==='m'){setMode(mode==='navigate'?'single':'navigate');return}
-
  if(k==='+'||k==='='){zoomBy(1.15);return}if(k==='-'){zoomBy(1/1.15);return}
-
  const step=35;if(k==='arrowleft'||k==='a')panX+=step;if(k==='arrowright'||k==='d')panX-=step;if(k==='arrowup'||k==='w')panY+=step;if(k==='arrowdown'||k==='s')panY-=step;
-
  if(['arrowleft','arrowright','arrowup','arrowdown'].includes(k))e.preventDefault();
-
 }
-
 function resize(){const dpr=Math.min(window.devicePixelRatio||1,2);screenW=window.innerWidth;screenH=window.innerHeight;canvas.width=Math.round(screenW*dpr);canvas.height=Math.round(screenH*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}
-
 function loop(now){requestAnimationFrame(loop);
-
  const dt=Math.min(.1,(now-framePrev)/1000||0);framePrev=now;
-
  if(active){if(!paused){simAccum+=dt*speed;while(simAccum>=18){simAccum-=18;monthEnd()}trafficTick(dt*speed)}saveAccum+=dt;if(saveAccum>=15){saveAccum=0;persist()}}
-
  if(now-lastDraw>=34){draw();lastDraw=now}
-
 }
-
 function attachControls(){
-
  canvas.addEventListener('pointerdown',onDown);canvas.addEventListener('pointermove',onMove);canvas.addEventListener('pointerup',onUp);canvas.addEventListener('pointercancel',onUp);canvas.addEventListener('contextmenu',e=>e.preventDefault());
-
  canvas.addEventListener('wheel',e=>{e.preventDefault();zoomBy(Math.exp(-e.deltaY*.0015),e.clientX,e.clientY)},{passive:false});
-
  $('zoomIn').onclick=()=>zoomBy(1.23);$('zoomOut').onclick=()=>zoomBy(1/1.23);
-
  $('rotate').onclick=()=>{yaw+=Math.PI/4;toast('Carte tournée de 45°')};
-
  $('recenter').onclick=()=>{panX=0;panY=0;zoom=defaultZoom();yaw=Math.PI/4};
-
  $('viewToggle').onclick=()=>setView(view==='3d'?'2d':'3d');
-
  $('speedBtn').onclick=()=>{const rates=[1,2,4,8];speed=rates[(rates.indexOf(speed)+1)%rates.length];refreshControls();toast('Vitesse du temps : ×'+speed)};
-
  $('pauseBtn').onclick=()=>{paused=!paused;refreshControls()};
-
  $('worldsBtn').onclick=showWorldList;$('cityInfo').onclick=showServices;
-
  $('modeSingle').onclick=()=>setMode('single');$('modeArea').onclick=()=>setMode('area');$('modeLine').onclick=()=>setMode('line');
-
  $('modeNavigate').onclick=()=>setMode('navigate');$('navBtn').onclick=()=>setMode(mode==='navigate'?'single':'navigate');
-
- $('exitBtn').onclick=()=>{persist();active=null;tiles=new Map();owned=new Set();cars=[];showWorldList()};
-
+ $('exitBtn').onclick=()=>{persist();active=null;tiles=new Map();owned=new Set();cars=[];trains=[];showWorldList()};
  $('minimap').addEventListener('pointerdown',e=>{if(!active)return;const rect=e.currentTarget.getBoundingClientRect();const x=clamp(Math.floor((e.clientX-rect.left)/rect.width*GRID),0,GRID-1),z=clamp(Math.floor((e.clientY-rect.top)/rect.height*GRID),0,GRID-1);const q=project(x,z);panX+=screenW*.51-q.x;panY+=screenH*.48-q.y});
-
- document.querySelectorAll('.category').forEach(b=>b.onclick=()=>{currentCategory=b.dataset.cat;const first=Object.entries(TYPES).find(([_,d])=>d.category===currentCategory);if(first)selected=first[0];if(TYPES[selected]?.zone||selected==='buyLand')mode='area';else if(isRoad(selected))mode='line';else mode='single';refreshControls()});
-
+ document.querySelectorAll('.category').forEach(b=>b.onclick=()=>{currentCategory=b.dataset.cat;const first=Object.entries(TYPES).find(([_,d])=>d.category===currentCategory);if(first)selected=first[0];if(TYPES[selected]?.zone||selected==='buyLand'||selected==='district'||selected==='fillWater'||selected==='restoreWater')mode='area';else if(isRoad(selected)||TYPES[selected]?.visual==='line')mode='line';else mode='single';refreshControls()});
  $('collapseStatus').onclick=()=>{const el=$('statusContents');el.hidden=!el.hidden;$('collapseStatus').textContent=el.hidden?'+':'−'};
-
  window.addEventListener('keydown',handleKeyboard);window.addEventListener('resize',resize);
-
  document.addEventListener('visibilitychange',()=>{if(document.hidden)persist()});window.addEventListener('beforeunload',()=>persist());
-
  $('overlay').addEventListener('click',e=>{if(e.target===$('overlay')&&active)setOpen(false)});
-
 }
-
 function init(){worlds=readWorlds();resize();attachControls();refreshControls();showWorldList();requestAnimationFrame(loop)}
-
 init();
-
 })();
 
 </script>
-
 </body>
-
 </html>
- </div>
-
-<canvas id="minimap" width="144" height="144" title="Mini-carte : toucher pour te déplacer" aria-label="Mini-carte interactive"></canvas>
-
-<div id="selectionInfo" class="selection-info" hidden></div>
-
-<div id="toast" role="status" aria-live="polite"></div>
-
-<div class="bottom-area" id="bottomArea">
-
-  <div class="tool-options"><button class="mode" id="modeNavigate">🤚 Déplacer</button><button class="mode active" id="modeSingle">👆 Une case</button><button class="mode" id="modeArea">▦ Zone</button><button class="mode" id="modeLine">╱ Ligne</button><span id="chosenTool" class="chosen">🏠 Maison</span></div>
-
-  <div class="build-items" id="buildItems" aria-label="Constructions"></div>
-
-  <nav class="categories" id="categories" aria-label="Catégories de construction">
-
-    <button data-cat="housing" class="category active">🏠 Habitations</button>
-
-    <button data-cat="economy" class="category">🏪 Économie</button>
-
-    <button data-cat="roads" class="category">🛣️ Routes</button>
-
-    <button data-cat="services" class="category">🌳 Services</button>
-
-    <button data-cat="electricity" class="category">⚡ Énergie</button>
-
-    <button data-cat="water" class="category">💧 Eau</button>
-
-    <button data-cat="zoning" class="category">▦ Zones</button>
-
-    <button data-cat="management" class="category">💶 Gestion</button>
-
-  </nav>
-
-</div>
-
-<div class="help-line" id="helpLine">🤚 Déplacer la carte · Pincer à deux doigts pour zoomer · Cliquer sur la mini-carte pour se déplacer</div>
-
-<section id="overlay" class="overlay open" aria-modal="true" role="dialog">
-
-  <div id="modal" class="modal"><div id="modalBody"></div></div>
-
-</section>
-
-<script>
-
-/* Nexus City v3.0 — zero external dependencies. The same 3D scene is projected
-
- * from 3-dimensional world coordinates onto Canvas; the 2D view is orthogonal. */
-
-(() => {
-
-'use strict';
-
-const $ = id => document.getElementById(id);
-
-const canvas = $('world'), ctx = canvas.getContext('2d', {alpha:false});
-
-const GRID = 64, STORE = 'nexus-city-worlds-v2', MAX_WORLDS = 3, OLD_GRID = 34, SHIFT = (GRID-OLD_GRID)/2;
-
-const LAND_BASE = 90000, ADJ = [[1,0],[-1,0],[0,1],[0,-1]];
-
- // Reverse exactly the 3D painter order: choose the visible silhouette on top.
-
- buildings.sort((a,b)=>renderDepth(b.x,b.z)-renderDepth(a.x,a.z));
-
- return buildings.find(t=>insidePoly(sx,sy,tileHull(t)))||null;
-
-}
-
-function drawMiniMap(){
-
- const mini=$('minimap'),m=mini.getContext('2d'),size=mini.width;
-
- m.clearRect(0,0,size,size);m.fillStyle='#86b56e';m.fillRect(0,0,size,size);
-
- const cell=size/GRID;
-
- for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++){
-
-  const t=at(x,z),land=terrain(x,z);
-
-  m.fillStyle=t?(isRoad(t.type)?'#606974':TYPES[t.type]?.people?'#f0b67a':'#e9dfc1'):land==='river'?'#4eafd2':owned.has(key(x,z))?'#a4d58b':'#6a955b';
-
-  m.fillRect(x*cell,z*cell,cell+.3,cell+.3);
-
- }
-
- const mid=unproject(screenW*.5,screenH*.52);
-
- m.strokeStyle='#fff';m.lineWidth=2.3;m.strokeRect((mid.x-6)*cell,(mid.z-6)*cell,12*cell,12*cell);
-
-}
-
-function draw(){if(!active){ctx.fillStyle='#7ab6d9';ctx.fillRect(0,0,screenW,screenH);return}
-
- const bg=ctx.createLinearGradient(0,0,0,screenH);bg.addColorStop(0,'#8cc5e9');bg.addColorStop(.55,'#d2e9da');bg.addColorStop(1,'#8fbd87');ctx.fillStyle=bg;ctx.fillRect(0,0,screenW,screenH);
-
- const all=[];for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++)if(visibleTile(x,z))all.push({x,z,depth:renderDepth(x,z)});
-
- if(view==='3d')all.sort((a,b)=>a.depth-b.depth);
-
- for(const t of all)groundTile(t.x,t.z);
-
- // Buildings and vehicles share a depth-sort; cars behind buildings are occluded.
-
- const objects=[...tiles.values()].filter(t=>!isRoad(t.type)&&visibleTile(t.x,t.z)).map(t=>({type:'building',data:t,depth:renderDepth(t.x,t.z)}));
-
- for(const car of cars)if(car.to&&visibleTile(car.x,car.z))objects.push({type:'car',data:car,depth:renderDepth(car.x,car.z)});
-
- if(view==='3d')objects.sort((a,b)=>a.depth-b.depth|| (a.type==='car'?-1:1));
-
- for(const item of objects){if(item.type==='building')building(item.data);else drawCar(item.data)}
-
- if(areaPreview&&active){
-
-  const {plan}=planBuild(selected,areaPreview.cells),planned=new Map(plan.map(c=>[key(c.x,c.z),c.type]));
-
-  for(const cell of areaPreview.cells){if(!visibleTile(cell.x,cell.z))continue;
-
-   const t=planned.get(key(cell.x,cell.z)),valid=!!t||selected==='bulldoze'&&canPlace('bulldoze',cell.x,cell.z);
-
-   const color=t==='road'?'rgba(237,204,103,.58)':valid?'rgba(72,222,159,.39)':'rgba(239,96,106,.23)';
-
-   poly(corners(cell.x,cell.z,1,1,.15),color,valid?'rgba(54,153,108,.6)':'rgba(180,46,46,.35)');
-
-  }
-
- }
-
- if(selected==='buyLand'||showParcels){
-
-  for(const c of all){if(!owned.has(key(c.x,c.z)))continue;poly(corners(c.x,c.z,1,1,.06),'rgba(244,204,84,.045)','rgba(250,225,117,.48)')}
-
- }
-
- if(hoveredCell&&(selected==='bulldoze'||selected==='inspect')){
-
-  const t=at(hoveredCell.x,hoveredCell.z);if(t&&t.type!=='townhall')poly(tileHull(t),selected==='bulldoze'?'rgba(244,72,70,.21)':'rgba(86,185,253,.20)',selected==='bulldoze'?'#ff6c74':'#8bdcff');
-
- }
-
- ctx.fillStyle='rgba(15,31,46,.66)';ctx.beginPath();ctx.roundRect(12,screenH*.56,view==='3d'?67:65,25,7);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.textAlign='left';ctx.fillText(view==='3d'?'◈ 3D':'▦ 2D',23,screenH*.56+17);
-
- if(Math.floor(performance.now()/150)!==lastMiniFrame){lastMiniFrame=Math.floor(performance.now()/150);drawMiniMap();}
-
-}
-
-function previewCells(start,end){if(mode==='area'){
-
- const cells=[];const x1=clamp(Math.min(start.x,end.x),0,GRID-1),x2=clamp(Math.max(start.x,end.x),0,GRID-1),z1=clamp(Math.min(start.z,end.z),0,GRID-1),z2=clamp(Math.max(start.z,end.z),0,GRID-1);
-
- for(let z=z1;z<=z2;z++)for(let x=x1;x<=x2;x++)cells.push({x,z});return cells.slice(0,450);
-
- }
-
- if(mode==='line'){
-
- const cells=[];let x0=start.x,z0=start.z,x1=end.x,z1=end.z,dx=Math.abs(x1-x0),dz=Math.abs(z1-z0),sx=x0<x1?1:-1,sz=z0<z1?1:-1,err=dx-dz;
-
- while(cells.length<GRID*2){cells.push({x:x0,z:z0});if(x0===x1&&z0===z1)break;const e=2*err;if(e>-dz){err-=dz;x0+=sx}if(e<dx){err+=dx;z0+=sz}}
-
- return cells;
-
- }
-
- return [end];
-
-}
-
-function setPreview(start,end){
-
- const cells=previewCells(start,end);areaPreview={cells};
-
- const p=planBuild(selected,cells);$('selectionInfo').hidden=false;
