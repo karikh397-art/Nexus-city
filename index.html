@@ -870,3 +870,537 @@ init();
 </script>
 </body>
 </html>
+$('month').textContent=formatDate(active.month);$('population').textContent=fmt(active.pop);$('happiness').textContent=s.happiness+'%';bar('happinessBar',s.happiness/100);
+
+ $('power').textContent=active.options.needPower?fmt(s.power)+' / '+fmt(s.powerNeed):'Non requis';bar('powerBar',s.pRatio);
+
+ $('water').textContent=active.options.needWater?fmt(s.water)+' / '+fmt(s.waterNeed):'Non requis';bar('waterBar',s.wRatio);
+
+ $('traffic').textContent=s.congestion>1.3?'Embouteillages':s.congestion>.75?'Chargé':'Fluide';bar('trafficBar',1-Math.min(1,s.congestion/2));
+
+ $('jobs').textContent=fmt(s.jobs)+' / '+fmt(Math.ceil(active.pop*.48));
+
+ $('landCount').textContent=fmt(owned.size)+' cases';$('air').textContent=s.greenScore+' %';bar('airBar',s.greenScore/100);
+
+ $('security').textContent=s.security+' %';bar('securityBar',s.security/100);
+
+ $('cityMessage').textContent=active.options.needPower&&s.pRatio<1?'⚡ Construis une centrale, une éolienne ou un barrage.':active.options.needWater&&s.wRatio<1?'💧 La ville manque d’eau potable.':s.congestion>1.3?'🚗 Embouteillages ! Ajoute des avenues et des routes.':s.roadRatio<.95?'🛣️ Raccorde les habitations aux routes.':s.housing===0?'🏠 Commence par construire des logements.':'✅ La ville se développe. Consulte le budget chaque mois.';
+
+ refreshControls();
+
+}
+
+function openAction(id){if(!active)return;({budget:showBudget,loans:showLoans,taxes:showTaxes,export:showExport,save:()=>persist(true),worlds:showWorldList,services:showServices})[id]?.()}
+
+function line(label,value){return `<div class="listrow"><span>${label}</span><b>${value}</b></div>`}
+
+function showBudget(){const s=allStats(),r=active.lastReport;
+
+ modal('💶 Budget et finances',`<div class="summary-grid"><div class="summary"><span>Trésorerie</span><strong>${active.options.unlimited?'∞':euros(active.money)}</strong></div><div class="summary"><span>Recettes / mois</span><strong>${euros(r.income||0)}</strong></div><div class="summary"><span>Solde / mois</span><strong>${r.profit>=0?'+':''}${euros(r.profit||0)}</strong></div></div>
+
+ <h3>Recettes du dernier mois</h3>${line('Loyers des logements municipaux',euros(r.rent||0))}${line('Impôts et taxes',euros(r.taxes||0))}${line('Exportation d’électricité',euros(r.exportIncome||0))}
+
+ <h3>Dépenses du dernier mois</h3>${line('Entretien bâtiments et infrastructures',euros(r.maintenance||0))}${line('Remboursement des prêts',euros(r.loanPayments||0))}
+
+ <h3>Capacités actuelles</h3>${line('Population / places disponibles',fmt(active.pop)+' / '+fmt(s.housing))}${line('Électricité excédentaire',fmt(Math.max(0,s.power-s.powerNeed))+' MWh/mois')}
+
+ <div class="button-row"><button class="primary" id="budgetLoans">🏦 Faire un prêt</button><button class="secondary" id="budgetTax">⚖️ Impôts</button><button class="secondary" id="budgetExport">⚡ Exportations</button></div><p class="note">Les prix et revenus représentent des ordres de grandeur simplifiés du jeu. Les résultats sont recalculés à la fin de chaque mois.</p>`);
+
+ $('budgetLoans').onclick=showLoans;$('budgetTax').onclick=showTaxes;$('budgetExport').onclick=showExport;}
+
+function showTaxes(){modal('⚖️ Fiscalité',`<p>Les taux influencent les recettes du prochain mois. Des taxes trop fortes réduisent la satisfaction des habitants.</p>${[
+
+ ['residential','Impôts résidentiels'],['commercial','Taxes commerciales'],['industrial','Taxes industrielles']].map(([k,v])=>`<div class="field"><label for="tax-${k}">${v} — <b id="val-${k}">${active.tax[k]} %</b></label><input id="tax-${k}" type="range" min="0" max="25" step="1" value="${active.tax[k]}" style="width:100%;accent-color:#f9c96e"></div>`).join('')}<div class="button-row"><button class="primary" id="returnBudget">Revenir au budget</button></div>`);
+
+ for(const k of Object.keys(TAX_DEFAULT))$('tax-'+k).oninput=e=>{active.tax[k]=Number(e.target.value);$('val-'+k).textContent=active.tax[k]+' %';persist();refreshUI()};$('returnBudget').onclick=showBudget;}
+
+function showLoans(){const loans=active.loans||[];
+
+ modal('🏦 Emprunts municipaux',`<p>Financement à <b>3,5 % par an</b> avec mensualités fixes. Les remboursements sont prélevés chaque mois de jeu. Maximum 4 prêts actifs.</p><div class="summary-grid"><div class="summary"><span>Prêts actifs</span><strong>${loans.length} / 4</strong></div><div class="summary"><span>Capital restant</span><strong>${euros(loans.reduce((s,l)=>s+l.remaining,0))}</strong></div><div class="summary"><span>Mensualités</span><strong>${euros(loans.reduce((s,l)=>s+l.payment,0))}</strong></div></div>${loans.length?`<h3>Prêts en cours</h3>${loans.map(l=>line(euros(l.remaining)+' restant',euros(l.payment)+'/mois · '+l.monthsLeft+' mois')).join('')}`:''}
+
+ <h3>Nouveau prêt</h3><div class="field"><label for="loanYears">Durée de remboursement</label><select id="loanYears"><option value="2">2 ans — 24 mois</option><option value="5" selected>5 ans — 60 mois</option><option value="10">10 ans — 120 mois</option></select></div><div class="button-row">${[2000000,10000000,25000000,50000000].map(a=>`<button class="btn-card" data-borrow="${a}" ${loans.length>=4?'disabled':''}><b>+ ${euros(a)}</b><small id="loan-${a}">${euros(loanPayment(a,5))} / mois</small></button>`).join('')}</div><div class="button-row"><button class="secondary" id="loanBudget">← Budget</button></div>`);
+
+ $('loanYears').onchange=()=>[2000000,10000000,25000000,50000000].forEach(a=>$('loan-'+a).textContent=euros(loanPayment(a,Number($('loanYears').value)))+'/mois');
+
+ $('modalBody').querySelectorAll('[data-borrow]').forEach(b=>b.onclick=()=>takeLoan(Number(b.dataset.borrow),Number($('loanYears').value)));$('loanBudget').onclick=showBudget;}
+
+function showExport(){const s=allStats(),surplus=Math.max(0,s.power-s.powerNeed);
+
+ modal('⚡ Exportation d’électricité',`<p>Vends automatiquement la production excédentaire chaque mois. Les besoins des habitants et des entreprises sont servis en premier.</p><div class="summary-grid"><div class="summary"><span>Production</span><strong>${fmt(s.power)}</strong></div><div class="summary"><span>Consommation</span><strong>${fmt(s.powerNeed)}</strong></div><div class="summary"><span>Surplus</span><strong>${fmt(surplus)}</strong></div></div>${line('Prix indicatif de vente','83 € / MWh')}${line('Revenu estimé / mois',euros(surplus*83))}<div class="checkbox-row"><input type="checkbox" id="exportSwitch" ${active.exportPower?'checked':''}><label for="exportSwitch">Activer la vente automatique du surplus</label></div><div class="button-row"><button class="primary" id="exportBudget">Voir le budget</button></div><p class="note">1 unité de production = 1 MWh par mois de jeu, selon les règles simplifiées du simulateur.</p>`);
+
+ $('exportSwitch').onchange=e=>{active.exportPower=e.target.checked;persist();toast(active.exportPower?'Exportation activée':'Exportation désactivée')};$('exportBudget').onclick=showBudget;}
+
+function showServices(){const s=allStats();modal('📊 Informations sur la ville',`<div class="summary-grid"><div class="summary"><span>Population</span><strong>${fmt(active.pop)}</strong></div><div class="summary"><span>Satisfaction</span><strong>${s.happiness} %</strong></div><div class="summary"><span>Emplois</span><strong>${fmt(s.jobs)}</strong></div></div>${line('Capacité logements',fmt(s.housing))}${line('Accès aux routes',Math.round(s.roadRatio*100)+' %')}${line('Électricité produite / demandée',fmt(s.power)+' / '+fmt(s.powerNeed))}${line('Eau fournie / demandée',fmt(s.water)+' / '+fmt(s.waterNeed))}${line('Trafic (demande / capacité)',Math.round(s.congestion*100)+' %')}${line('Nombre de bâtiments et infrastructures',fmt(s.buildings))}${line('Qualité de l’air et environnement',s.greenScore+' %')}${line('Sécurité',s.security+' %')}${line('Santé',s.health+' %')}${line('Éducation',s.education+' %')}${line('Mobilité et embouteillages',s.transport+' %')}${line('Offres d’emploi',s.economy+' %')}${line('Parcelles achetées',fmt(owned.size))}${line('Crédits en cours',String(active.loans.length))}<div class="button-row"><button class="primary" id="infoBudget">💶 Budget</button><button class="secondary" id="infoExport">⚡ Surplus électrique</button></div>`);$('infoBudget').onclick=showBudget;$('infoExport').onclick=showExport;}
+
+function inspectTile(t){const d=TYPES[t.type];if(!d){modal('🏛️ Hôtel de ville',`<p>Point de départ de ta ville. Cet édifice est protégé contre la démolition.</p>`);return}
+
+ modal(d.icon+' '+d.name,`${line('Coordonnées',t.x+' / '+t.z)}${line('Prix de construction',euros(d.cost))}${line('Valeur récupérée en démolissant',euros(Math.round(d.cost*.6)))}${line('Entretien mensuel',euros(d.upkeep||0))}${d.people?line('Capacité d’accueil',fmt(d.people)+' habitants'):''}${d.jobs?line('Emplois',fmt(d.jobs)):''}${d.power?line('Électricité produite',fmt(d.power)+' MWh/mois'):''}${d.water?line('Eau fournie',fmt(d.water)+' unités/mois'):''}${line('Raccordement à une route',adjacentRoad(t.x,t.z)?'Oui':'Non')}<p class="note">Le terrain est calculé dans le monde courant.</p>`);
+
+}
+
+function scale(){return (view==='3d'?28:27)*zoom}
+
+function origin(){return {x:screenW*.52+panX,y:screenH*.48+panY}}
+
+function project(x,z,h=0){const s=scale(),o=origin(),dx=x-(GRID-1)/2,dz=z-(GRID-1)/2;
+
+ if(view==='2d')return {x:o.x+dx*s,y:o.y+dz*s};
+
+ const c=Math.cos(yaw),t=Math.sin(yaw);
+
+ return {x:o.x+(dx*c-dz*t)*s,y:o.y+(dx*t+dz*c)*s*.59-h*s*.86};
+
+}
+
+function unproject(sx,sy){const s=scale(),o=origin(),u=(sx-o.x)/s,v=(sy-o.y)/s;
+
+ if(view==='2d')return {x:Math.round(u+(GRID-1)/2),z:Math.round(v+(GRID-1)/2)};
+
+ const t=v/.59,c=Math.cos(yaw),sn=Math.sin(yaw);
+
+ return {x:Math.round(u*c+t*sn+(GRID-1)/2),z:Math.round(-u*sn+t*c+(GRID-1)/2)};
+
+}
+
+function poly(points,color,outline='rgba(0,0,0,.1)'){if(!points.length)return;ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);ctx.closePath();ctx.fillStyle=color;ctx.fill();if(outline){ctx.strokeStyle=outline;ctx.lineWidth=.6;ctx.stroke()}}
+
+function segment(a,b,color,width=2){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.s[... ELLIPSIZATION ...].z)}));
+
+ for(const car of cars)if(car.to&&visibleTile(car.x,car.z))objects.push({type:'car',data:car,depth:renderDepth(car.x,car.z)});
+
+ if(view==='3d')objects.sort((a,b)=>a.depth-b.depth|| (a.type==='car'?-1:1));
+
+ for(const item of objects){if(item.type==='building')building(item.data);else drawCar(item.data)}
+
+ if(areaPreview&&active){
+
+  const {plan}=planBuild(selected,areaPreview.cells),planned=new Map(plan.map(c=>[key(c.x,c.z),c.type]));
+
+  for(const cell of areaPreview.cells){if(!visibleTile(cell.x,cell.z))continue;
+
+   const t=planned.get(key(cell.x,cell.z)),valid=!!t||selected==='bulldoze'&&canPlace('bulldoze',cell.x,cell.z);
+
+   const color=t==='road'?'rgba(237,204,103,.58)':valid?'rgba(72,222,159,.39)':'rgba(239,96,106,.23)';
+
+   poly(corners(cell.x,cell.z,1,1,.15),color,valid?'rgba(54,153,108,.6)':'rgba(180,46,46,.35)');
+
+  }
+
+ }
+
+ if(selected==='buyLand'||showParcels){
+
+  for(const c of all){if(!owned.has(key(c.x,c.z)))continue;poly(corners(c.x,c.z,1,1,.06),'rgba(244,204,84,.045)','rgba(250,225,117,.48)')}
+
+ }
+
+ if(hoveredCell&&(selected==='bulldoze'||selected==='inspect')){
+
+  const t=at(hoveredCell.x,hoveredCell.z);if(t&&t.type!=='townhall')poly(tileHull(t),selected==='bulldoze'?'rgba(244,72,70,.21)':'rgba(86,185,253,.20)',selected==='bulldoze'?'#ff6c74':'#8bdcff');
+
+ }
+
+ ctx.fillStyle='rgba(15,31,46,.66)';ctx.beginPath();ctx.roundRect(12,screenH*.56,view==='3d'?67:65,25,7);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.textAlign='left';ctx.fillText(view==='3d'?'◈ 3D':'▦ 2D',23,screenH*.56+17);
+
+ if(Math.floor(performance.now()/150)!==lastMiniFrame){lastMiniFrame=Math.floor(performance.now()/150);drawMiniMap();}
+
+}
+
+function previewCells(start,end){if(mode==='area'){
+
+ const cells=[];const x1=clamp(Math.min(start.x,end.x),0,GRID-1),x2=clamp(Math.max(start.x,end.x),0,GRID-1),z1=clamp(Math.min(start.z,end.z),0,GRID-1),z2=clamp(Math.max(start.z,end.z),0,GRID-1);
+
+ for(let z=z1;z<=z2;z++)for(let x=x1;x<=x2;x++)cells.push({x,z});return cells.slice(0,450);
+
+ }
+
+ if(mode==='line'){
+
+ const cells=[];let x0=start.x,z0=start.z,x1=end.x,z1=end.z,dx=Math.abs(x1-x0),dz=Math.abs(z1-z0),sx=x0<x1?1:-1,sz=z0<z1?1:-1,err=dx-dz;
+
+ while(cells.length<GRID*2){cells.push({x:x0,z:z0});if(x0===x1&&z0===z1)break;const e=2*err;if(e>-dz){err-=dz;x0+=sx}if(e<dx){err+=dx;z0+=sz}}
+
+ return cells;
+
+ }
+
+ return [end];
+
+}
+
+function setPreview(start,end){
+
+ const cells=previewCells(start,end);areaPreview={cells};
+
+ const p=planBuild(selected,cells);$('selectionInfo').hidden=false;
+
+ $('selectionInfo').textContent=p.plan.length+' éléments'+(p.roads?' dont '+p.roads+' routes':'')+' · Coût : '+euros(p.cost);
+
+}
+
+function endPreview(){areaPreview=null;$('selectionInfo').hidden=true}
+
+function setMode(next){mode=next;endPreview();refreshControls()}
+
+function setView(next){view=next;endPreview();refreshControls();toast('Vue '+next.toUpperCase()+' activée')}
+
+function zoomBy(ratio,cx=screenW/2,cy=screenH/2){
+
+ const before=unproject(cx,cy),old=zoom;
+
+ zoom=clamp(zoom*ratio,.26,3.4);
+
+ // Keep the point under the cursor/fingers steady when zooming.
+
+ if(old!==zoom){const p=project(before.x,before.z);panX+=cx-p.x;panY+=cy-p.y}
+
+}
+
+function eventPos(e){return {x:e.clientX,y:e.clientY}}
+
+function pinchInfo(){const p=[...pointerPoints.values()];if(p.length<2)return null;
+
+ return {x:(p[0].x+p[1].x)/2,y:(p[0].y+p[1].y)/2,d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)};
+
+}
+
+function onDown(e){if(!active||$('overlay').classList.contains('open'))return;
+
+ try{canvas.setPointerCapture(e.pointerId)}catch{}
+
+ pointerPoints.set(e.pointerId,eventPos(e));
+
+ if(pointerPoints.size>=2){const info=pinchInfo();pinchDistance=info.d;pinchCenter=info;pointerStart=null;endPreview();return}
+
+ const raw=unproject(e.clientX,e.clientY);
+
+ const visual=(selected==='bulldoze'||selected==='inspect')?pickBuilding(e.clientX,e.clientY):null;
+
+ const cell=visual?{x:visual.x,z:visual.z}:raw;
+
+ pointerStart={id:e.pointerId,first:eventPos(e),last:eventPos(e),cell,moved:false,rotate:e.button===2||e.altKey};
+
+ if(mode!=='single'&&mode!=='navigate'&&!pointerStart.rotate)setPreview(raw,raw);
+
+}
+
+function onMove(e){
+
+ if(!pointerPoints.has(e.pointerId)){
+
+  if(active&&(selected==='bulldoze'||selected==='inspect')){const hit=pickBuilding(e.clientX,e.clientY);hoveredCell=hit?{x:hit.x,z:hit.z}:null}return;
+
+ }
+
+ pointerPoints.set(e.pointerId,eventPos(e));
+
+ if(pointerPoints.size>=2){const p=pinchInfo();if(pinchCenter){panX+=p.x-pinchCenter.x;panY+=p.y-pinchCenter.y}
+
+  if(pinchDistance>0)zoomBy(p.d/pinchDistance,p.x,p.y);
+
+  pinchDistance=p.d;pinchCenter=p;return;
+
+ }
+
+ if(!pointerStart||pointerStart.id!==e.pointerId)return;
+
+ const dx=e.clientX-pointerStart.last.x,dy=e.clientY-pointerStart.last.y;
+
+ if(Math.hypot(e.clientX-pointerStart.first.x,e.clientY-pointerStart.first.y)>9)pointerStart.moved=true;
+
+ if(pointerStart.rotate){if(view==='3d')yaw+=dx*.008;else{panX+=dx;panY+=dy}}
+
+ else if(mode==='navigate'||mode==='single'){if(pointerStart.moved){panX+=dx;panY+=dy}}
+
+ else setPreview(unproject(pointerStart.first.x,pointerStart.first.y),unproject(e.clientX,e.clientY));
+
+ pointerStart.last=eventPos(e);
+
+}
+
+function onUp(e){
+
+ pointerPoints.delete(e.pointerId);
+
+ if(pointerPoints.size){pointerStart=null;pinchDistance=0;pinchCenter=null;endPreview();return}
+
+ if(!pointerStart||pointerStart.id!==e.pointerId){endPreview();return}
+
+ const p=pointerStart;pointerStart=null;
+
+ if(p.rotate||mode==='navigate'){endPreview();return}
+
+ if(mode==='single'&&!p.moved){
+
+  const hit=(selected==='bulldoze'||selected==='inspect')?pickBuilding(e.clientX,e.clientY):null;
+
+  build(selected,[hit?{x:hit.x,z:hit.z}:unproject(e.clientX,e.clientY)]);
+
+ }else if(mode!=='single'&&p.moved){
+
+  build(selected,previewCells(unproject(p.first.x,p.first.y),unproject(e.clientX,e.clientY)));
+
+ }else if(mode!=='single')build(selected,[unproject(e.clientX,e.clientY)]);
+
+ endPreview();
+
+}
+
+function handleKeyboard(e){if(e.target.matches('input,textarea,select')||e.ctrlKey||e.metaKey)return;
+
+ if(e.key==='Escape'){if($('overlay').classList.contains('open')&&active){setOpen(false);return}selected='inspect';refreshControls();return}
+
+ if($('overlay').classList.contains('open'))return;
+
+ if(e.key===' '){e.preventDefault();paused=!paused;refreshControls();return}
+
+ const k=e.key.toLowerCase();if(k==='2'||k==='3'){setView(k==='2'?'2d':'3d');return}
+
+ if(k==='r'){yaw+=Math.PI/4;return}if(k==='b'){selected='bulldoze';currentCategory='management';mode='single';refreshControls();return}if(k==='m'){setMode(mode==='navigate'?'single':'navigate');return}
+
+ if(k==='+'||k==='='){zoomBy(1.15);return}if(k==='-'){zoomBy(1/1.15);return}
+
+ const step=35;if(k==='arrowleft'||k==='a')panX+=step;if(k==='arrowright'||k==='d')panX-=step;if(k==='arrowup'||k==='w')panY+=step;if(k==='arrowdown'||k==='s')panY-=step;
+
+ if(['arrowleft','arrowright','arrowup','arrowdown'].includes(k))e.preventDefault();
+
+}
+
+function resize(){const dpr=Math.min(window.devicePixelRatio||1,2);screenW=window.innerWidth;screenH=window.innerHeight;canvas.width=Math.round(screenW*dpr);canvas.height=Math.round(screenH*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}
+
+function loop(now){requestAnimationFrame(loop);
+
+ const dt=Math.min(.1,(now-framePrev)/1000||0);framePrev=now;
+
+ if(active){if(!paused){simAccum+=dt*speed;while(simAccum>=18){simAccum-=18;monthEnd()}trafficTick(dt*speed)}saveAccum+=dt;if(saveAccum>=15){saveAccum=0;persist()}}
+
+ if(now-lastDraw>=34){draw();lastDraw=now}
+
+}
+
+function attachControls(){
+
+ canvas.addEventListener('pointerdown',onDown);canvas.addEventListener('pointermove',onMove);canvas.addEventListener('pointerup',onUp);canvas.addEventListener('pointercancel',onUp);canvas.addEventListener('contextmenu',e=>e.preventDefault());
+
+ canvas.addEventListener('wheel',e=>{e.preventDefault();zoomBy(Math.exp(-e.deltaY*.0015),e.clientX,e.clientY)},{passive:false});
+
+ $('zoomIn').onclick=()=>zoomBy(1.23);$('zoomOut').onclick=()=>zoomBy(1/1.23);
+
+ $('rotate').onclick=()=>{yaw+=Math.PI/4;toast('Carte tournée de 45°')};
+
+ $('recenter').onclick=()=>{panX=0;panY=0;zoom=defaultZoom();yaw=Math.PI/4};
+
+ $('viewToggle').onclick=()=>setView(view==='3d'?'2d':'3d');
+
+ $('speedBtn').onclick=()=>{const rates=[1,2,4,8];speed=rates[(rates.indexOf(speed)+1)%rates.length];refreshControls();toast('Vitesse du temps : ×'+speed)};
+
+ $('pauseBtn').onclick=()=>{paused=!paused;refreshControls()};
+
+ $('worldsBtn').onclick=showWorldList;$('cityInfo').onclick=showServices;
+
+ $('modeSingle').onclick=()=>setMode('single');$('modeArea').onclick=()=>setMode('area');$('modeLine').onclick=()=>setMode('line');
+
+ $('modeNavigate').onclick=()=>setMode('navigate');$('navBtn').onclick=()=>setMode(mode==='navigate'?'single':'navigate');
+
+ $('exitBtn').onclick=()=>{persist();active=null;tiles=new Map();owned=new Set();cars=[];showWorldList()};
+
+ $('minimap').addEventListener('pointerdown',e=>{if(!active)return;const rect=e.currentTarget.getBoundingClientRect();const x=clamp(Math.floor((e.clientX-rect.left)/rect.width*GRID),0,GRID-1),z=clamp(Math.floor((e.clientY-rect.top)/rect.height*GRID),0,GRID-1);const q=project(x,z);panX+=screenW*.51-q.x;panY+=screenH*.48-q.y});
+
+ document.querySelectorAll('.category').forEach(b=>b.onclick=()=>{currentCategory=b.dataset.cat;const first=Object.entries(TYPES).find(([_,d])=>d.category===currentCategory);if(first)selected=first[0];if(TYPES[selected]?.zone||selected==='buyLand')mode='area';else if(isRoad(selected))mode='line';else mode='single';refreshControls()});
+
+ $('collapseStatus').onclick=()=>{const el=$('statusContents');el.hidden=!el.hidden;$('collapseStatus').textContent=el.hidden?'+':'−'};
+
+ window.addEventListener('keydown',handleKeyboard);window.addEventListener('resize',resize);
+
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)persist()});window.addEventListener('beforeunload',()=>persist());
+
+ $('overlay').addEventListener('click',e=>{if(e.target===$('overlay')&&active)setOpen(false)});
+
+}
+
+function init(){worlds=readWorlds();resize();attachControls();refreshControls();showWorldList();requestAnimationFrame(loop)}
+
+init();
+
+})();
+
+</script>
+
+</body>
+
+</html>
+ </div>
+
+<canvas id="minimap" width="144" height="144" title="Mini-carte : toucher pour te déplacer" aria-label="Mini-carte interactive"></canvas>
+
+<div id="selectionInfo" class="selection-info" hidden></div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<div class="bottom-area" id="bottomArea">
+
+  <div class="tool-options"><button class="mode" id="modeNavigate">🤚 Déplacer</button><button class="mode active" id="modeSingle">👆 Une case</button><button class="mode" id="modeArea">▦ Zone</button><button class="mode" id="modeLine">╱ Ligne</button><span id="chosenTool" class="chosen">🏠 Maison</span></div>
+
+  <div class="build-items" id="buildItems" aria-label="Constructions"></div>
+
+  <nav class="categories" id="categories" aria-label="Catégories de construction">
+
+    <button data-cat="housing" class="category active">🏠 Habitations</button>
+
+    <button data-cat="economy" class="category">🏪 Économie</button>
+
+    <button data-cat="roads" class="category">🛣️ Routes</button>
+
+    <button data-cat="services" class="category">🌳 Services</button>
+
+    <button data-cat="electricity" class="category">⚡ Énergie</button>
+
+    <button data-cat="water" class="category">💧 Eau</button>
+
+    <button data-cat="zoning" class="category">▦ Zones</button>
+
+    <button data-cat="management" class="category">💶 Gestion</button>
+
+  </nav>
+
+</div>
+
+<div class="help-line" id="helpLine">🤚 Déplacer la carte · Pincer à deux doigts pour zoomer · Cliquer sur la mini-carte pour se déplacer</div>
+
+<section id="overlay" class="overlay open" aria-modal="true" role="dialog">
+
+  <div id="modal" class="modal"><div id="modalBody"></div></div>
+
+</section>
+
+<script>
+
+/* Nexus City v3.0 — zero external dependencies. The same 3D scene is projected
+
+ * from 3-dimensional world coordinates onto Canvas; the 2D view is orthogonal. */
+
+(() => {
+
+'use strict';
+
+const $ = id => document.getElementById(id);
+
+const canvas = $('world'), ctx = canvas.getContext('2d', {alpha:false});
+
+const GRID = 64, STORE = 'nexus-city-worlds-v2', MAX_WORLDS = 3, OLD_GRID = 34, SHIFT = (GRID-OLD_GRID)/2;
+
+const LAND_BASE = 90000, ADJ = [[1,0],[-1,0],[0,1],[0,-1]];
+
+ // Reverse exactly the 3D painter order: choose the visible silhouette on top.
+
+ buildings.sort((a,b)=>renderDepth(b.x,b.z)-renderDepth(a.x,a.z));
+
+ return buildings.find(t=>insidePoly(sx,sy,tileHull(t)))||null;
+
+}
+
+function drawMiniMap(){
+
+ const mini=$('minimap'),m=mini.getContext('2d'),size=mini.width;
+
+ m.clearRect(0,0,size,size);m.fillStyle='#86b56e';m.fillRect(0,0,size,size);
+
+ const cell=size/GRID;
+
+ for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++){
+
+  const t=at(x,z),land=terrain(x,z);
+
+  m.fillStyle=t?(isRoad(t.type)?'#606974':TYPES[t.type]?.people?'#f0b67a':'#e9dfc1'):land==='river'?'#4eafd2':owned.has(key(x,z))?'#a4d58b':'#6a955b';
+
+  m.fillRect(x*cell,z*cell,cell+.3,cell+.3);
+
+ }
+
+ const mid=unproject(screenW*.5,screenH*.52);
+
+ m.strokeStyle='#fff';m.lineWidth=2.3;m.strokeRect((mid.x-6)*cell,(mid.z-6)*cell,12*cell,12*cell);
+
+}
+
+function draw(){if(!active){ctx.fillStyle='#7ab6d9';ctx.fillRect(0,0,screenW,screenH);return}
+
+ const bg=ctx.createLinearGradient(0,0,0,screenH);bg.addColorStop(0,'#8cc5e9');bg.addColorStop(.55,'#d2e9da');bg.addColorStop(1,'#8fbd87');ctx.fillStyle=bg;ctx.fillRect(0,0,screenW,screenH);
+
+ const all=[];for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++)if(visibleTile(x,z))all.push({x,z,depth:renderDepth(x,z)});
+
+ if(view==='3d')all.sort((a,b)=>a.depth-b.depth);
+
+ for(const t of all)groundTile(t.x,t.z);
+
+ // Buildings and vehicles share a depth-sort; cars behind buildings are occluded.
+
+ const objects=[...tiles.values()].filter(t=>!isRoad(t.type)&&visibleTile(t.x,t.z)).map(t=>({type:'building',data:t,depth:renderDepth(t.x,t.z)}));
+
+ for(const car of cars)if(car.to&&visibleTile(car.x,car.z))objects.push({type:'car',data:car,depth:renderDepth(car.x,car.z)});
+
+ if(view==='3d')objects.sort((a,b)=>a.depth-b.depth|| (a.type==='car'?-1:1));
+
+ for(const item of objects){if(item.type==='building')building(item.data);else drawCar(item.data)}
+
+ if(areaPreview&&active){
+
+  const {plan}=planBuild(selected,areaPreview.cells),planned=new Map(plan.map(c=>[key(c.x,c.z),c.type]));
+
+  for(const cell of areaPreview.cells){if(!visibleTile(cell.x,cell.z))continue;
+
+   const t=planned.get(key(cell.x,cell.z)),valid=!!t||selected==='bulldoze'&&canPlace('bulldoze',cell.x,cell.z);
+
+   const color=t==='road'?'rgba(237,204,103,.58)':valid?'rgba(72,222,159,.39)':'rgba(239,96,106,.23)';
+
+   poly(corners(cell.x,cell.z,1,1,.15),color,valid?'rgba(54,153,108,.6)':'rgba(180,46,46,.35)');
+
+  }
+
+ }
+
+ if(selected==='buyLand'||showParcels){
+
+  for(const c of all){if(!owned.has(key(c.x,c.z)))continue;poly(corners(c.x,c.z,1,1,.06),'rgba(244,204,84,.045)','rgba(250,225,117,.48)')}
+
+ }
+
+ if(hoveredCell&&(selected==='bulldoze'||selected==='inspect')){
+
+  const t=at(hoveredCell.x,hoveredCell.z);if(t&&t.type!=='townhall')poly(tileHull(t),selected==='bulldoze'?'rgba(244,72,70,.21)':'rgba(86,185,253,.20)',selected==='bulldoze'?'#ff6c74':'#8bdcff');
+
+ }
+
+ ctx.fillStyle='rgba(15,31,46,.66)';ctx.beginPath();ctx.roundRect(12,screenH*.56,view==='3d'?67:65,25,7);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.textAlign='left';ctx.fillText(view==='3d'?'◈ 3D':'▦ 2D',23,screenH*.56+17);
+
+ if(Math.floor(performance.now()/150)!==lastMiniFrame){lastMiniFrame=Math.floor(performance.now()/150);drawMiniMap();}
+
+}
+
+function previewCells(start,end){if(mode==='area'){
+
+ const cells=[];const x1=clamp(Math.min(start.x,end.x),0,GRID-1),x2=clamp(Math.max(start.x,end.x),0,GRID-1),z1=clamp(Math.min(start.z,end.z),0,GRID-1),z2=clamp(Math.max(start.z,end.z),0,GRID-1);
+
+ for(let z=z1;z<=z2;z++)for(let x=x1;x<=x2;x++)cells.push({x,z});return cells.slice(0,450);
+
+ }
+
+ if(mode==='line'){
+
+ const cells=[];let x0=start.x,z0=start.z,x1=end.x,z1=end.z,dx=Math.abs(x1-x0),dz=Math.abs(z1-z0),sx=x0<x1?1:-1,sz=z0<z1?1:-1,err=dx-dz;
+
+ while(cells.length<GRID*2){cells.push({x:x0,z:z0});if(x0===x1&&z0===z1)break;const e=2*err;if(e>-dz){err-=dz;x0+=sx}if(e<dx){err+=dx;z0+=sz}}
+
+ return cells;
+
+ }
+
+ return [end];
+
+}
+
+function setPreview(start,end){
+
+ const cells=previewCells(start,end);areaPreview={cells};
+
+ const p=planBuild(selected,cells);$('selectionInfo').hidden=false;
